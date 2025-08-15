@@ -61,13 +61,18 @@ proxy-groups:
       - SG 新加坡
       - JP 日本
       - US 美国
+      - UK 英国
+      - AU 澳洲
+      - MY 马来
+      - TR 土耳其
+      - AR 阿根廷
       - KR 韩国
       - 其它地区
       - 手动选择
       - DIRECT
   
   - name: AI Service
-    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/ChatGPT.png
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/AI.png
     type: select
     proxies:
       - 默认节点
@@ -76,6 +81,53 @@ proxy-groups:
       - SG 新加坡
       - JP 日本
       - US 美国
+      - UK 英国
+      - AU 澳洲
+      - MY 马来
+      - TR 土耳其
+      - AR 阿根廷
+      - KR 韩国
+      - 其它地区
+      - 自动选择
+      - 手动选择
+      - DIRECT
+
+  - name: Google
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Google_Search.png
+    type: select
+    proxies:
+      - 默认节点
+      - HK 香港
+      - TW 台湾
+      - SG 新加坡
+      - JP 日本
+      - US 美国
+      - UK 英国
+      - AU 澳洲
+      - MY 马来
+      - TR 土耳其
+      - AR 阿根廷
+      - KR 韩国
+      - 其它地区
+      - 自动选择
+      - 手动选择
+      - DIRECT
+  
+  - name: Telegram
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Telegram.png
+    type: select
+    proxies:
+      - 默认节点
+      - HK 香港
+      - TW 台湾
+      - SG 新加坡
+      - JP 日本
+      - US 美国
+      - UK 英国
+      - AU 澳洲
+      - MY 马来
+      - TR 土耳其
+      - AR 阿根廷
       - KR 韩国
       - 其它地区
       - 自动选择
@@ -88,6 +140,7 @@ proxy-groups:
     type: select
     use:
       - ProxyProviderA
+      - ProxyProviderB
     filter: "澳门|🇲🇴|港|🇭🇰|HK|(?i)Hong"
     proxies:
       - HK-Auto
@@ -104,6 +157,7 @@ proxy-groups:
     type: select
     use:
       - ProxyProviderA
+      - ProxyProviderB
     filter: "台|🇹🇼|湾|TW|(?i)Taiwan"
     proxies:
       - TW-Auto
@@ -120,6 +174,7 @@ proxy-groups:
     type: select
     use:
       - ProxyProviderA
+      - ProxyProviderB
     filter: "新加坡|坡|狮城|🇸🇬|SG|(?i)Singapore"
     proxies:
       - SG-Auto
@@ -136,6 +191,7 @@ proxy-groups:
     type: select
     use:
       - ProxyProviderA
+      - ProxyProviderB
     filter: "日|🇯🇵|东京|JP|(?i)Japan"
     proxies:
       - JP-Auto
@@ -152,6 +208,7 @@ proxy-groups:
     type: select
     use:
       - ProxyProviderA
+      - ProxyProviderB
     filter: "美|🇺🇲|US|(?i)States|America"
     proxies:
       - US-Auto
@@ -163,11 +220,46 @@ proxy-groups:
     tolerance: 50
     include-all: true
     filter: "美|🇺🇲|US|(?i)States|America"
+  - name: UK 英国
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/United_Kingdom.png
+    type: select
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+    filter: "(?i)(英国|UK|United Kingdom|伦敦|London)"
+    proxies:
+      - UK-Auto
+  - name: UK-Auto
+    hidden: true
+    type: url-test
+    interval: 120
+    lazy: true
+    tolerance: 50
+    include-all: true
+    filter: "(?i)(英国|UK|United Kingdom|伦敦|London)"
+  - name: AU 澳洲
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Australia.png
+    type: select
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+    filter: "(?i)(🇦🇺|澳大利亚|AU|Australia|澳洲)"
+    proxies:
+      - AU-Auto
+  - name: AU-Auto
+    hidden: true
+    type: url-test
+    interval: 120
+    lazy: true
+    tolerance: 50
+    include-all: true
+    filter: "(?i)(🇦🇺|澳大利亚|AU|Australia|澳洲)"
   - name: KR 韩国
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Korea.png
     type: select
     use:
       - ProxyProviderA
+      - ProxyProviderB
     filter: "韩|🇰🇷|kr|(?i)Korea"
     proxies:
       - KR-Auto
@@ -179,12 +271,64 @@ proxy-groups:
     tolerance: 50
     include-all: true
     filter: "韩|🇰🇷|kr|(?i)Korea"
+  - name: MY 马来
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Malaysia.png
+    type: select
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+    filter: "(?i)(🇲🇾|马来西亚|MY|Malaysia)"
+    proxies:
+      - MY-Auto
+  - name: MY-Auto
+    hidden: true
+    type: url-test
+    interval: 120
+    lazy: true
+    tolerance: 50
+    include-all: true
+    filter: "(?i)(🇲🇾|马来西亚|MY|Malaysia)"
+  - name: TR 土耳其
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Turkey.png
+    type: select
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+    filter: "(?i)(🇹🇷|土耳其|TR|Turkey)"
+    proxies:
+      - TR-Auto
+  - name: TR-Auto
+    hidden: true
+    type: url-test
+    interval: 120
+    lazy: true
+    tolerance: 50
+    include-all: true
+    filter: "(?i)(🇹🇷|土耳其|TR|Turkey)"
+  - name: AR 阿根廷
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Argentina.png
+    type: select
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+    filter: "(?i)(🇦🇷|阿根廷|AR|Argentina)"
+    proxies:
+      - AR-Auto
+  - name: AR-Auto
+    hidden: true
+    type: url-test
+    interval: 120
+    lazy: true
+    tolerance: 50
+    include-all: true
+    filter: "(?i)(🇦🇷|阿根廷|AR|Argentina)"
   - name: 其它地区
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/World_Map.png
     type: select
     use:
       - ProxyProviderA
-    filter: "(?i)^(?!.*(?:🇭🇰|🇹🇼|🇯🇵|🇰🇷|🇺🇸|🇸🇬|🇨🇳|港|hk|hong|台|tw|taiwan|日本|jp|japan|韩|kr|korea|美|us|states|新加坡|sg|singapore)).*"
+      - ProxyProviderB
+    filter: "(?i)^(?!.*(?:🇭🇰|🇹🇼|🇯🇵|🇰🇷|🇺🇸|🇸🇬|🇨🇳|🇬🇧|🇦🇺|🇲🇾|🇹🇷|🇦🇷|阿根廷|AR|Argentina|土耳其|TR|Turkey|马来西亚|MY|Malaysia|英国|UK|伦敦|London|澳大利亚|AU|Australia|澳洲|港|hk|hong|台|tw|taiwan|日本|jp|japan|韩|kr|korea|美|us|states|新加坡|sg|singapore|\\.com\\b|群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
     proxies:
       - 其他-Auto
   - name: 其他-Auto
@@ -194,7 +338,7 @@ proxy-groups:
     lazy: true
     tolerance: 50
     include-all: true
-    filter: "(?i)^(?!.*(?:🇭🇰|🇹🇼|🇯🇵|🇰🇷|🇺🇸|🇸🇬|🇨🇳|港|hk|hong|台|tw|taiwan|日本|jp|japan|韩|kr|korea|美|us|states|新加坡|sg|singapore)).*"
+    filter: "(?i)^(?!.*(?:🇭🇰|🇹🇼|🇯🇵|🇰🇷|🇺🇸|🇸🇬|🇨🇳|🇬🇧|🇦🇺|🇲🇾|🇹🇷|🇦🇷|阿根廷|AR|Argentina|土耳其|TR|Turkey|马来西亚|MY|Malaysia|英国|UK|伦敦|London|澳大利亚|AU|Australia|澳洲|港|hk|hong|台|tw|taiwan|日本|jp|japan|韩|kr|korea|美|us|states|新加坡|sg|singapore|\\.com\\b|群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
   # 不限制地区
   - name: 自动选择
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Auto.png
@@ -203,12 +347,12 @@ proxy-groups:
     lazy: true
     tolerance: 50
     include-all: true
+    filter: "^(?=.*)(?!.*(?:群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|\\.com\\b|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
   - name: 手动选择
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Static.png
     type: select
-    interval: 120
-    lazy: true
     include-all: true
+    filter: "^(?=.*)(?!.*(?:群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|\\.com\\b|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
 
 # 规则提供商
 rule-providers:
@@ -228,12 +372,26 @@ rule-providers:
     behavior: domain
     url: https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/apple.txt
     interval: 86400 
+  telegram:
+    type: http
+    behavior: domain
+    format: text
+    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/telegram.list
+    interval: 86400
+  google-cn:
+    type: http
+    behavior: domain
+    format: text
+    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/google-cn.list
+    interval: 86400
 
 # 规则配置
 rules:
   - DOMAIN-SUFFIX,appsflyer.com,默认节点
   - RULE-SET,reject,REJECT
   - RULE-SET,category-ai-chat-!cn,AI Service
+  - RULE-SET,telegram,Telegram
+  - RULE-SET,google-cn,Google
   - RULE-SET,apple,DIRECT
   - DOMAIN-SUFFIX,larksuite.com,DIRECT
   - GEOIP,CN,DIRECT
