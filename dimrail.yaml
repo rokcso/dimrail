@@ -1,0 +1,241 @@
+# GitHub: https://github.com/rokcso/dimrail
+# Stash Config by rokcso
+# Update: 2025-08-15
+
+# ██████╗  ██╗ ███╗   ███╗ ██████╗   █████╗  ██╗ ██╗     
+# ██╔══██╗ ██║ ████╗ ████║ ██╔══██╗ ██╔══██╗ ██║ ██║     
+# ██║  ██║ ██║ ██╔████╔██║ ██████╔╝ ███████║ ██║ ██║     
+# ██║  ██║ ██║ ██║╚██╔╝██║ ██╔══██╗ ██╔══██║ ██║ ██║     
+# ██████╔╝ ██║ ██║ ╚═╝ ██║ ██║  ██║ ██║  ██║ ██║ ███████╗
+# ╚═════╝  ╚═╝ ╚═╝     ╚═╝ ╚═╝  ╚═╝ ╚═╝  ╚═╝ ╚═╝ ╚══════╝
+
+# 规则模式：rule/global/direct
+mode: rule
+
+# 5 个日志级别：silent/info/warning/error/debug
+# 日志级别越高日志输出量越大，越倾向于调试，若需要请自行开启
+log-level: info
+
+# DNS 服务器配置
+dns:
+  # 以下填写的 DNS 服务器将会被用来解析 DNS 服务的域名
+  # 仅填写 DNS 服务器的 IP 地址
+  default-nameserver:
+    - 223.5.5.5
+    - 114.114.114.114
+    # - 119.29.29.29
+    # - system # 使用 iOS 系统 DNS
+    # 支持 UDP/TCP/DoT/DoH 协议的 DNS 服务，可以指明具体的连接端口号
+    # 所有 DNS 请求将会直接发送到服务器，不经过任何代理
+    # Stash 会使用最先获得的解析记录回复 DNS 请求
+  nameserver:
+    # 不建议配置超过 2 个 DNS 服务器，会增加系统功耗
+    - https://doh.pub/dns-query
+    - https://dns.alidns.com/dns-query
+    # - quic://dns.adguard.com:853
+    # - doq://test.dns.nextdns.io:853
+    # - system # 使用系统 DNS
+  # 在以下列表的域名将不会被解析为 fake ip，这些域名相关的解析请求将会返回它们真实的 IP 地址
+  fake-ip-filter:
+    - "*"
+    - "+.lan"
+    - "+.local"
+
+# 代理服务提供商
+proxy-providers:
+  ProxyProviderA:
+    url:  # 用你的订阅链接替换
+    interval: 86400
+    benchmark-url: http://www.gstatic.com/generate_204
+    benchmark-timeout: 10
+
+# 代理组
+proxy-groups:
+  - name: 默认节点
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Proxy.png
+    type: select
+    proxies:
+      - 自动选择
+      - HK 香港
+      - TW 台湾
+      - SG 新加坡
+      - JP 日本
+      - US 美国
+      - KR 韩国
+      - 其它地区
+      - 手动选择
+      - DIRECT
+  
+  - name: AI Service
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/ChatGPT.png
+    type: select
+    proxies:
+      - 默认节点
+      - HK 香港
+      - TW 台湾
+      - SG 新加坡
+      - JP 日本
+      - US 美国
+      - KR 韩国
+      - 其它地区
+      - 自动选择
+      - 手动选择
+      - DIRECT
+
+  # 基于地区分组
+  - name: HK 香港
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Hong_Kong.png
+    type: select
+    use:
+      - ProxyProviderA
+    filter: "澳门|🇲🇴|港|🇭🇰|HK|(?i)Hong"
+    proxies:
+      - HK-Auto
+  - name: HK-Auto
+    hidden: true
+    type: url-test
+    interval: 120
+    lazy: true
+    tolerance: 50
+    include-all: true
+    filter: "澳门|🇲🇴|港|🇭🇰|HK|(?i)Hong"
+  - name: TW 台湾
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Taiwan.png
+    type: select
+    use:
+      - ProxyProviderA
+    filter: "台|🇹🇼|湾|TW|(?i)Taiwan"
+    proxies:
+      - TW-Auto
+  - name: TW-Auto
+    hidden: true
+    type: url-test
+    interval: 120
+    lazy: true
+    tolerance: 50
+    include-all: true
+    filter: "台|🇹🇼|湾|TW|(?i)Taiwan"
+  - name: SG 新加坡
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Singapore.png
+    type: select
+    use:
+      - ProxyProviderA
+    filter: "新加坡|坡|狮城|🇸🇬|SG|(?i)Singapore"
+    proxies:
+      - SG-Auto
+  - name: SG-Auto
+    hidden: true
+    type: url-test
+    interval: 120
+    lazy: true
+    tolerance: 50
+    include-all: true
+    filter: "新加坡|坡|狮城|🇸🇬|SG|(?i)Singapore"
+  - name: JP 日本
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Japan.png
+    type: select
+    use:
+      - ProxyProviderA
+    filter: "日|🇯🇵|东京|JP|(?i)Japan"
+    proxies:
+      - JP-Auto
+  - name: JP-Auto
+    hidden: true
+    type: url-test
+    interval: 120
+    lazy: true
+    tolerance: 50
+    include-all: true
+    filter: "日|🇯🇵|东京|JP|(?i)Japan"
+  - name: US 美国
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/United_States.png
+    type: select
+    use:
+      - ProxyProviderA
+    filter: "美|🇺🇲|US|(?i)States|America"
+    proxies:
+      - US-Auto
+  - name: US-Auto
+    hidden: true
+    type: url-test
+    interval: 120
+    lazy: true
+    tolerance: 50
+    include-all: true
+    filter: "美|🇺🇲|US|(?i)States|America"
+  - name: KR 韩国
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Korea.png
+    type: select
+    use:
+      - ProxyProviderA
+    filter: "韩|🇰🇷|kr|(?i)Korea"
+    proxies:
+      - KR-Auto
+  - name: KR-Auto
+    hidden: true
+    type: url-test
+    interval: 120
+    lazy: true
+    tolerance: 50
+    include-all: true
+    filter: "韩|🇰🇷|kr|(?i)Korea"
+  - name: 其它地区
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/World_Map.png
+    type: select
+    use:
+      - ProxyProviderA
+    filter: "(?i)^(?!.*(?:🇭🇰|🇹🇼|🇯🇵|🇰🇷|🇺🇸|🇸🇬|🇨🇳|港|hk|hong|台|tw|taiwan|日本|jp|japan|韩|kr|korea|美|us|states|新加坡|sg|singapore)).*"
+    proxies:
+      - 其他-Auto
+  - name: 其他-Auto
+    hidden: true
+    type: url-test
+    interval: 120
+    lazy: true
+    tolerance: 50
+    include-all: true
+    filter: "(?i)^(?!.*(?:🇭🇰|🇹🇼|🇯🇵|🇰🇷|🇺🇸|🇸🇬|🇨🇳|港|hk|hong|台|tw|taiwan|日本|jp|japan|韩|kr|korea|美|us|states|新加坡|sg|singapore)).*"
+  # 不限制地区
+  - name: 自动选择
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Auto.png
+    type: url-test
+    interval: 120
+    lazy: true
+    tolerance: 50
+    include-all: true
+  - name: 手动选择
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Static.png
+    type: select
+    interval: 120
+    lazy: true
+    include-all: true
+
+# 规则提供商
+rule-providers:
+  reject:
+    type: http
+    behavior: domain
+    url: https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt
+    interval: 86400
+  category-ai-chat-!cn:
+    type: http
+    behavior: domain
+    format: text
+    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/category-ai-chat-!cn.list
+    interval: 86400
+  apple:
+    type: http
+    behavior: domain
+    url: https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/apple.txt
+    interval: 86400 
+
+# 规则配置
+rules:
+  - DOMAIN-SUFFIX,appsflyer.com,默认节点
+  - RULE-SET,reject,REJECT
+  - RULE-SET,category-ai-chat-!cn,AI Service
+  - RULE-SET,apple,DIRECT
+  - DOMAIN-SUFFIX,larksuite.com,DIRECT
+  - GEOIP,CN,DIRECT
+  - GEOSITE,CN,DIRECT
+  - MATCH,默认节点
