@@ -476,11 +476,8 @@ rule-providers:
 rules:
   - DOMAIN-SUFFIX,appsflyer.com,默认节点
   - DOMAIN-SUFFIX,larksuite.com,DIRECT
-  # 常用拒绝
   - RULE-SET,reject,REJECT
-  # AI Service
   - RULE-SET,category-ai-chat-!cn,AI Service
-  # Telegram
   - IP-ASN,62014,Telegram,no-resolve
   - IP-ASN,59930,Telegram,no-resolve
   - IP-ASN,44907,Telegram,no-resolve
@@ -488,20 +485,14 @@ rules:
   - PROCESS-NAME,Telegram.exe,Telegram
   - PROCESS-NAME,Telegram,Telegram
   - RULE-SET,telegram,Telegram
-  # Google
   - RULE-SET,google-cn,Google
-  # Spotify
   - RULE-SET,spotify,Spotify
-  # YouTube
   - RULE-SET,youtube,YouTube
-  # GitHub
   - RULE-SET,github,GitHub
-  # Apple
   - RULE-SET,apple-cn,Apple
   - GEOIP,LAN,DIRECT
   - GEOIP,CN,DIRECT
   - GEOSITE,CN,DIRECT
-  - SCRIPT,quic,默认节点
   - MATCH,默认节点
 
 # 规则模式：rule/global/direct
@@ -511,9 +502,9 @@ mode: rule
 # 日志级别越高日志输出量越大，越倾向于调试，若需要请自行开启
 log-level: info
 
-script:
-  shortcuts:
-    quic: network == 'udp' and dst_port == 443
+# script:
+#   shortcuts:
+#     quic: network == 'udp' and dst_port == 443
 
 # DNS 服务器配置
 dns:

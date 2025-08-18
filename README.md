@@ -23,7 +23,7 @@
 
 或者从 URL 导入：
 
-```text
+```
 https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/dimrail.yaml
 ```
 
