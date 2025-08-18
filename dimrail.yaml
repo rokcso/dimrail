@@ -1,6 +1,7 @@
+# Dimrail: Stash Config by rokcso
 # GitHub: https://github.com/rokcso/dimrail
-# Stash Config by rokcso
-# Update: 2025-08-15
+# Author: [rokcso](https://rokcso.com)
+# Update: 2025-08-18
 
 # ██████╗  ██╗ ███╗   ███╗ ██████╗   █████╗  ██╗ ██╗     
 # ██╔══██╗ ██║ ████╗ ████║ ██╔══██╗ ██╔══██╗ ██║ ██║     
@@ -9,41 +10,14 @@
 # ██████╔╝ ██║ ██║ ╚═╝ ██║ ██║  ██║ ██║  ██║ ██║ ███████╗
 # ╚═════╝  ╚═╝ ╚═╝     ╚═╝ ╚═╝  ╚═╝ ╚═╝  ╚═╝ ╚═╝ ╚══════╝
 
-# 规则模式：rule/global/direct
-mode: rule
-
-# 5 个日志级别：silent/info/warning/error/debug
-# 日志级别越高日志输出量越大，越倾向于调试，若需要请自行开启
-log-level: info
-
-# DNS 服务器配置
-dns:
-  # 以下填写的 DNS 服务器将会被用来解析 DNS 服务的域名
-  # 仅填写 DNS 服务器的 IP 地址
-  default-nameserver:
-    - 223.5.5.5
-    - 114.114.114.114
-    # - 119.29.29.29
-    # - system # 使用 iOS 系统 DNS
-    # 支持 UDP/TCP/DoT/DoH 协议的 DNS 服务，可以指明具体的连接端口号
-    # 所有 DNS 请求将会直接发送到服务器，不经过任何代理
-    # Stash 会使用最先获得的解析记录回复 DNS 请求
-  nameserver:
-    # 不建议配置超过 2 个 DNS 服务器，会增加系统功耗
-    - https://doh.pub/dns-query
-    - https://dns.alidns.com/dns-query
-    # - quic://dns.adguard.com:853
-    # - doq://test.dns.nextdns.io:853
-    # - system # 使用系统 DNS
-  # 在以下列表的域名将不会被解析为 fake ip，这些域名相关的解析请求将会返回它们真实的 IP 地址
-  fake-ip-filter:
-    - "*"
-    - "+.lan"
-    - "+.local"
-
 # 代理服务提供商
 proxy-providers:
   ProxyProviderA:
+    url:  # 用你的订阅链接替换
+    interval: 86400
+    benchmark-url: http://www.gstatic.com/generate_204
+    benchmark-timeout: 10
+  ProxyProviderB:
     url:  # 用你的订阅链接替换
     interval: 86400
     benchmark-url: http://www.gstatic.com/generate_204
@@ -112,9 +86,93 @@ proxy-groups:
       - 自动选择
       - 手动选择
       - DIRECT
+
+  - name: Apple
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Apple.png
+    type: select
+    proxies:
+      - 默认节点
+      - HK 香港
+      - TW 台湾
+      - SG 新加坡
+      - JP 日本
+      - US 美国
+      - UK 英国
+      - AU 澳洲
+      - MY 马来
+      - TR 土耳其
+      - AR 阿根廷
+      - KR 韩国
+      - 其它地区
+      - 自动选择
+      - 手动选择
+      - DIRECT
   
   - name: Telegram
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Telegram.png
+    type: select
+    proxies:
+      - 默认节点
+      - HK 香港
+      - TW 台湾
+      - SG 新加坡
+      - JP 日本
+      - US 美国
+      - UK 英国
+      - AU 澳洲
+      - MY 马来
+      - TR 土耳其
+      - AR 阿根廷
+      - KR 韩国
+      - 其它地区
+      - 自动选择
+      - 手动选择
+      - DIRECT
+
+  - name: Spotify
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Spotify.png
+    type: select
+    proxies:
+      - 默认节点
+      - HK 香港
+      - TW 台湾
+      - SG 新加坡
+      - JP 日本
+      - US 美国
+      - UK 英国
+      - AU 澳洲
+      - MY 马来
+      - TR 土耳其
+      - AR 阿根廷
+      - KR 韩国
+      - 其它地区
+      - 自动选择
+      - 手动选择
+      - DIRECT
+  
+  - name: YouTube
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/YouTube.png
+    type: select
+    proxies:
+      - 默认节点
+      - HK 香港
+      - TW 台湾
+      - SG 新加坡
+      - JP 日本
+      - US 美国
+      - UK 英国
+      - AU 澳洲
+      - MY 马来
+      - TR 土耳其
+      - AR 阿根廷
+      - KR 韩国
+      - 其它地区
+      - 自动选择
+      - 手动选择
+      - DIRECT
+    
+  - name: GitHub
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/GitHub.png
     type: select
     proxies:
       - 默认节点
@@ -152,6 +210,7 @@ proxy-groups:
     tolerance: 50
     include-all: true
     filter: "澳门|🇲🇴|港|🇭🇰|HK|(?i)Hong"
+
   - name: TW 台湾
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Taiwan.png
     type: select
@@ -169,6 +228,7 @@ proxy-groups:
     tolerance: 50
     include-all: true
     filter: "台|🇹🇼|湾|TW|(?i)Taiwan"
+
   - name: SG 新加坡
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Singapore.png
     type: select
@@ -186,6 +246,7 @@ proxy-groups:
     tolerance: 50
     include-all: true
     filter: "新加坡|坡|狮城|🇸🇬|SG|(?i)Singapore"
+
   - name: JP 日本
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Japan.png
     type: select
@@ -203,6 +264,7 @@ proxy-groups:
     tolerance: 50
     include-all: true
     filter: "日|🇯🇵|东京|JP|(?i)Japan"
+
   - name: US 美国
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/United_States.png
     type: select
@@ -220,6 +282,7 @@ proxy-groups:
     tolerance: 50
     include-all: true
     filter: "美|🇺🇲|US|(?i)States|America"
+
   - name: UK 英国
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/United_Kingdom.png
     type: select
@@ -237,6 +300,7 @@ proxy-groups:
     tolerance: 50
     include-all: true
     filter: "(?i)(英国|UK|United Kingdom|伦敦|London)"
+
   - name: AU 澳洲
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Australia.png
     type: select
@@ -254,6 +318,7 @@ proxy-groups:
     tolerance: 50
     include-all: true
     filter: "(?i)(🇦🇺|澳大利亚|AU|Australia|澳洲)"
+
   - name: KR 韩国
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Korea.png
     type: select
@@ -271,6 +336,7 @@ proxy-groups:
     tolerance: 50
     include-all: true
     filter: "韩|🇰🇷|kr|(?i)Korea"
+
   - name: MY 马来
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Malaysia.png
     type: select
@@ -288,6 +354,7 @@ proxy-groups:
     tolerance: 50
     include-all: true
     filter: "(?i)(🇲🇾|马来西亚|MY|Malaysia)"
+
   - name: TR 土耳其
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Turkey.png
     type: select
@@ -305,6 +372,7 @@ proxy-groups:
     tolerance: 50
     include-all: true
     filter: "(?i)(🇹🇷|土耳其|TR|Turkey)"
+
   - name: AR 阿根廷
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Argentina.png
     type: select
@@ -322,6 +390,7 @@ proxy-groups:
     tolerance: 50
     include-all: true
     filter: "(?i)(🇦🇷|阿根廷|AR|Argentina)"
+
   - name: 其它地区
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/World_Map.png
     type: select
@@ -367,10 +436,10 @@ rule-providers:
     format: text
     url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/category-ai-chat-!cn.list
     interval: 86400
-  apple:
+  apple-cn:
     type: http
     behavior: domain
-    url: https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/apple.txt
+    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/apple-cn.list
     interval: 86400 
   telegram:
     type: http
@@ -384,16 +453,88 @@ rule-providers:
     format: text
     url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/google-cn.list
     interval: 86400
+  spotify:
+    type: http
+    behavior: domain
+    format: text
+    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/spotify.list
+    interval: 86400
+  youtube:
+    type: http
+    behavior: domain
+    format: text
+    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/youtube.list
+    interval: 86400
+  github:
+    type: http
+    behavior: domain
+    format: text
+    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/github.list
+    interval: 86400
 
 # 规则配置
 rules:
   - DOMAIN-SUFFIX,appsflyer.com,默认节点
-  - RULE-SET,reject,REJECT
-  - RULE-SET,category-ai-chat-!cn,AI Service
-  - RULE-SET,telegram,Telegram
-  - RULE-SET,google-cn,Google
-  - RULE-SET,apple,DIRECT
   - DOMAIN-SUFFIX,larksuite.com,DIRECT
+  # 常用拒绝
+  - RULE-SET,reject,REJECT
+  # AI Service
+  - RULE-SET,category-ai-chat-!cn,AI Service
+  # Telegram
+  - IP-ASN,62014,Telegram,no-resolve
+  - IP-ASN,59930,Telegram,no-resolve
+  - IP-ASN,44907,Telegram,no-resolve
+  - IP-ASN,211157,Telegram,no-resolve
+  - PROCESS-NAME,Telegram.exe,Telegram
+  - PROCESS-NAME,Telegram,Telegram
+  - RULE-SET,telegram,Telegram
+  # Google
+  - RULE-SET,google-cn,Google
+  # Spotify
+  - RULE-SET,spotify,Spotify
+  # YouTube
+  - RULE-SET,youtube,YouTube
+  # GitHub
+  - RULE-SET,github,GitHub
+  # Apple
+  - RULE-SET,apple-cn,Apple
+  - GEOIP,LAN,DIRECT
   - GEOIP,CN,DIRECT
   - GEOSITE,CN,DIRECT
+  - SCRIPT,quic,默认节点
   - MATCH,默认节点
+
+# 规则模式：rule/global/direct
+mode: rule
+
+# 5 个日志级别：silent/info/warning/error/debug
+# 日志级别越高日志输出量越大，越倾向于调试，若需要请自行开启
+log-level: info
+
+script:
+  shortcuts:
+    quic: network == 'udp' and dst_port == 443
+
+# DNS 服务器配置
+dns:
+  # 以下填写的 DNS 服务器将会被用来解析 DNS 服务的域名
+  # 仅填写 DNS 服务器的 IP 地址
+  default-nameserver:
+    - 223.5.5.5
+    - 114.114.114.114
+    # - 119.29.29.29
+    # - system # 使用 iOS 系统 DNS
+    # 支持 UDP/TCP/DoT/DoH 协议的 DNS 服务，可以指明具体的连接端口号
+    # 所有 DNS 请求将会直接发送到服务器，不经过任何代理
+    # Stash 会使用最先获得的解析记录回复 DNS 请求
+  nameserver:
+    # 不建议配置超过 2 个 DNS 服务器，会增加系统功耗
+    - https://doh.pub/dns-query
+    - https://dns.alidns.com/dns-query
+    - quic://dns.adguard.com:853
+    # - doq://test.dns.nextdns.io:853
+    # - system # 使用系统 DNS
+  # 在以下列表的域名将不会被解析为 fake ip，这些域名相关的解析请求将会返回它们真实的 IP 地址
+  fake-ip-filter:
+    - "+.lan"
+    - "+.local"
