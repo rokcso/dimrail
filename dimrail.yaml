@@ -418,11 +418,12 @@ rule-providers:
     url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/reject.yaml
     path: ./rulset/reject.yaml
     interval: 86400
-  category-ai-chat-!cn:
+  ai-offshore:
     type: http
     behavior: domain
-    format: text
-    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/category-ai-chat-!cn.list
+    format: yaml
+    url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/ai-offshore.yaml
+    path: ./rulset/ai-offshore.yaml
     interval: 86400
   apple-cn:
     type: http
@@ -459,7 +460,8 @@ rules:
   - RULE-SET,lancidr,DIRECT
   - DOMAIN-SUFFIX,appsflyer.com,默认节点
   - DOMAIN-SUFFIX,larksuite.com,DIRECT
-  - RULE-SET,category-ai-chat-!cn,AI Service
+  - RULE-SET,ai-offshore,AI Service
+  - DOMAIN-KEYWORD,openai,AI Service
   - RULE-SET,telegram,Telegram
   - RULE-SET,spotify,Spotify
   - RULE-SET,youtube,YouTube

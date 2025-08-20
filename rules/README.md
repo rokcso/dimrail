@@ -4,15 +4,15 @@
 
 ## 个人向规则集维护最佳实践
 
-1. 定义规则集内容
+### 1. 定义规则集内容
 
 规则集文件格式的选择取决于其要在 `rules` 中使用的 `behavior` 类型和维护/性能需求。
 
 | 格式 | behavior 类型 |
 | --- | --- |
-| YAML | • ipcidr </br> • domain </br> • classical |
-| List | • ipcidr </br> • domain |
-| TXT | • classical |
+| YAML | ipcidr / domain / classical |
+| List | ipcidr / domain |
+| TXT | classical |
 
 可见 TXT 格式已经过时，当前主要为了兼容旧配置而存在，YAML 虽然文件体积稍大，但是结构清晰、支持注释，适合个人维护。所以我优先使用 YAML 文件格式维护规则集。
 
@@ -30,7 +30,7 @@ payload:
   - scholar.google.be
 ```
 
-2. 在 `rule-providers` 声明规则集
+### 2. 在 `rule-providers` 声明规则集
 
 ```yaml
 rule-providers:
@@ -41,7 +41,7 @@ rule-providers:
     interval: 86400
 ```
 
-3. 在 `rules` 使用规则集
+### 3. 在 `rules` 使用规则集
 
 ```yaml
 rules:
