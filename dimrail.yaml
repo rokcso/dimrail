@@ -425,11 +425,27 @@ rule-providers:
     url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/ai-offshore.yaml
     path: ./rulset/ai-offshore.yaml
     interval: 86400
+  apple-offshore:
+    type: http
+    behavior: domain
+    format: yaml
+    url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/apple-offshore.yaml
+    path: ./rulset/apple-offshore.yaml
+    interval: 86400
   apple-cn:
     type: http
     behavior: domain
-    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/apple-cn.list
-    interval: 86400 
+    format: yaml
+    url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/apple-cn.yaml
+    path: ./rulset/apple-cn.yaml
+    interval: 86400
+  github:
+    type: http
+    behavior: domain
+    format: yaml
+    url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/github.yaml
+    path: ./rulset/github.yaml
+    interval: 86400
   telegram:
     type: http
     behavior: domain
@@ -448,12 +464,6 @@ rule-providers:
     format: text
     url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/youtube.list
     interval: 86400
-  github:
-    type: http
-    behavior: domain
-    format: text
-    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/github.list
-    interval: 86400
 
 # 规则配置
 rules:
@@ -462,11 +472,13 @@ rules:
   - DOMAIN-SUFFIX,larksuite.com,DIRECT
   - RULE-SET,ai-offshore,AI Service
   - DOMAIN-KEYWORD,openai,AI Service
+  - RULE-SET,apple-offshore,Apple
+  - RULE-SET,apple-cn,DIRECT
+  - RULE-SET,github,GitHub
+  - DOMAIN-KEYWORD,github,GitHub
   - RULE-SET,telegram,Telegram
   - RULE-SET,spotify,Spotify
   - RULE-SET,youtube,YouTube
-  - RULE-SET,github,GitHub
-  - RULE-SET,apple-cn,Apple
   - GEOIP,LAN,DIRECT
   - GEOIP,CN,DIRECT
   - GEOSITE,CN,DIRECT
