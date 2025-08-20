@@ -479,9 +479,8 @@ rules:
   - RULE-SET,telegram,Telegram
   - RULE-SET,spotify,Spotify
   - RULE-SET,youtube,YouTube
-  - GEOIP,LAN,DIRECT
+  - GEOSITE,cn,DIRECT
   - GEOIP,CN,DIRECT
-  - GEOSITE,CN,DIRECT
   - MATCH,默认节点
 
 # 规则模式：rule/global/direct
