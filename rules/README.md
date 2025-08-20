@@ -1,3 +1,7 @@
+使用注意：
+
+我的 `reject.yaml` 极度保守，一般不建议使用。
+
 ## 个人向规则集维护最佳实践
 
 1. 定义规则集内容
@@ -5,7 +9,7 @@
 规则集文件格式的选择取决于其要在 `rules` 中使用的 `behavior` 类型和维护/性能需求。
 
 | 格式 | behavior 类型 |
-| :-: | :-: |
+| --- | --- |
 | YAML | • ipcidr </br> • domain </br> • classical |
 | List | • ipcidr </br> • domain |
 | TXT | • classical |
@@ -16,7 +20,6 @@
 
 - 如果规则条数超过 1 万时，考虑使用 List 文件格式；
 - 所有需要 classical 规则类型时，直接在 `rules` 中配置，不在规则集中声明。
-
 
 规则集示例：
 
@@ -34,7 +37,7 @@ rule-providers:
   google:
     type: http
     behavior: domain
-    url: # 规则集托管地址
+    url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/google.yaml # 规则集托管地址
     interval: 86400
 ```
 
