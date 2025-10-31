@@ -122,9 +122,7 @@ proxy-groups:
   - name: HK 香港
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Hong_Kong.png
     type: select
-    use:
-      - ProxyProviderA
-      - ProxyProviderB
+    include-all: true
     filter: "(?i)(澳门|🇲🇴|Macau|Macao|香港|🇭🇰|Hong Kong|HK|HKG)"
     proxies:
       - HK-Auto
@@ -141,9 +139,7 @@ proxy-groups:
   - name: SG 新加坡
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Singapore.png
     type: select
-    use:
-      - ProxyProviderA
-      - ProxyProviderB
+    include-all: true
     filter: "新加坡|坡|狮城|🇸🇬|SG|(?i)Singapore"
     proxies:
       - SG-Auto
@@ -160,9 +156,7 @@ proxy-groups:
   - name: JP 日本
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Japan.png
     type: select
-    use:
-      - ProxyProviderA
-      - ProxyProviderB
+    include-all: true
     filter: "(?i)(日本|🇯🇵|东京|大阪|JP|Japan|Tokyo|Osaka)"
     proxies:
       - JP-Auto
@@ -179,9 +173,7 @@ proxy-groups:
   - name: TW 台湾
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Taiwan.png
     type: select
-    use:
-      - ProxyProviderA
-      - ProxyProviderB
+    include-all: true
     filter: "(?i)(台湾|🇹🇼|TW|Taiwan|台-|台_|Taipei|TPE)"
     proxies:
       - TW-Auto
@@ -198,9 +190,7 @@ proxy-groups:
   - name: US 美国
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/United_States.png
     type: select
-    use:
-      - ProxyProviderA
-      - ProxyProviderB
+    include-all: true
     filter: "(?i)(美国|🇺🇸|US|USA|United States|America|Los Angeles|New York|San Francisco|Seattle|Chicago)"
     proxies:
       - US-Auto
@@ -217,9 +207,7 @@ proxy-groups:
   - name: UK 英国
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/United_Kingdom.png
     type: select
-    use:
-      - ProxyProviderA
-      - ProxyProviderB
+    include-all: true
     filter: "(?i)(英国|🇬🇧|UK|United Kingdom|Britain|伦敦|London|Manchester|Birmingham)"
     proxies:
       - UK-Auto
@@ -236,9 +224,7 @@ proxy-groups:
   - name: 其他线路
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/World_Map.png
     type: select
-    use:
-      - ProxyProviderA
-      - ProxyProviderB
+    include-all: true
     filter: "(?i)^(?!.*(?:🇭🇰|香港|HK|Hong Kong|🇹🇼|台湾|臺灣|TW|Taiwan|🇯🇵|日本|JP|Japan|🇰🇷|韩国|KR|Korea|🇺🇸|美国|US|USA|America|🇸🇬|新加坡|SG|Singapore|🇨🇳|中国|CN|China|🇬🇧|英国|UK|Britain|London|\\.com\\b|群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
     proxies:
       - 其他-Auto
