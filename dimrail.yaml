@@ -82,6 +82,7 @@ proxy-groups:
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Spotify.png
     type: select
     proxies:
+      - 流媒体专用
       - HK 香港
       - SG 新加坡
       - US 美国
@@ -95,6 +96,7 @@ proxy-groups:
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/YouTube.png
     type: select
     proxies:
+      - 流媒体专用
       - HK 香港
       - SG 新加坡
       - TW 台湾
@@ -220,6 +222,16 @@ proxy-groups:
     tolerance: 100
     include-all: true
     filter: "(?i)(英国|🇬🇧|UK|United Kingdom|Britain|伦敦|London|Manchester|Birmingham)"
+
+  - name: 流媒体专用
+    hidden: true
+    type: url-test
+    interval: 300
+    timeout: 5
+    lazy: true
+    tolerance: 100
+    include-all: true
+    filter: "(?i)(IPLC|IEPL|专线|游戏|Game|Media|流媒体|Netflix|Disney|HBO|Prime|Video|NF|原生|Native|解锁|Unlock|Premium|Elite|Pro)"
 
   - name: 其他线路
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/World_Map.png
