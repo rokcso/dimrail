@@ -1,0 +1,24 @@
+# 私有配置文件示例
+# 复制此文件为 config.private.yaml 并填入你的真实订阅链接
+#
+# 使用方法:
+#   cp config.private.example.yaml config.private.yaml
+#   vim config.private.yaml  # 填入真实订阅链接
+#
+# 注意事项:
+# 1. 如果只有一个订阅源，可以删除 ProxyProviderB
+
+proxy-providers:
+  # 代理提供商 A
+  ProxyProviderA:
+    url: https://example.com/sub # 替换为你的真实订阅链接
+    interval: 10800 # 更新间隔（秒），10800 = 3小时
+    benchmark-url: http://www.gstatic.com/generate_204
+    benchmark-timeout: 10
+
+  # 代理提供商 B（如果有多个订阅源）
+  ProxyProviderB:
+    url: https://example.com/sub # 替换为你的真实订阅链接
+    interval: 10800
+    benchmark-url: http://www.gstatic.com/generate_204
+    benchmark-timeout: 10
