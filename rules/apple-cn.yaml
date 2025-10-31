@@ -45,7 +45,7 @@ payload:
   - +.apple.com.cdn20.com # China CDN (ChinaCache)
   - +.apple.com.mwcloudcdn.com # China CDN (Meituan Cloud)
   - +.apple.com.mwcname.com # China CDN (Meituan CNAME)
-  - +.mzstatic.com # Media static assets
+  - cn.mzstatic.com # Media static assets
 
   # ===== Apple Services Infrastructure =====
   - +.apple-dns.net # DNS infrastructure
