@@ -1,36 +1,112 @@
+# AI Offshore Services Domain Rules
+# Purpose: Route AI services that require overseas access
+# Updated: 2025-10-31 based on market share data
+
 payload:
-  - +.cursor.com
+  # ===== OpenAI ChatGPT & Sora (Market Share: 60.7%) =====
+  - +.openai.com
+  - +.chatgpt.com
+  - +.oaistatic.com
+  - auth0.openai.com
+  - api.openai.com
+  - platform.openai.com
+  - cdn.openai.com
+  - file.oaiusercontent.com
+  - +.sora.com # Video generation (preview)
+
+  # ===== Microsoft Copilot (Market Share: 14.0%) =====
+  - +.copilot.microsoft.com
+  - copilot.cloud.microsoft
+  - sydney.bing.com
+  - edgeservices.bing.com
+
+  # ===== Google Gemini/Bard (Market Share: 13.5%) =====
+  - +.gemini.google.com
+  - +.bard.google.com # Legacy, may redirect to Gemini
+  - +.aistudio.google.com
+  - +.makersuite.google.com
+  - +.notebooklm.google.com
+  - +.generativelanguage.googleapis.com
+  - +.geller-pa.googleapis.com
+  - +.proactivebackend-pa.googleapis.com
   - ai.google.dev
   - alkalicore-pa.clients6.google.com
-  - api.github.com
-  - api.jetbrains.ai
-  - file.oaiusercontent.com
-  - gateway.ai.cloudflare.com
   - jules.google.com
-  - +.ai.com
-  - +.aistudio.google.com
-  - +.anthropic.com
-  - +.bard.google.com
-  - +.chat.com
-  - +.chatgpt.com
+
+  # ===== Perplexity AI (Market Share: 6.6%) =====
+  - +.perplexity.ai
+
+  # ===== Claude / Anthropic (Market Share: 3.6%) =====
   - +.claude.ai
-  - +.clipdrop.co
+  - +.anthropic.com
+  - console.anthropic.com
+
+  # ===== Grok / xAI (Market Share: 0.8%) =====
+  - +.grok.com
+  - +.x.ai
+
+  # ===== Character.AI (20M+ monthly visits) =====
+  - +.character.ai
+
+  # ===== AI Code Assistants =====
+  - +.cursor.com # AI code editor
+  - api.github.com # GitHub Copilot API
+  - copilot-proxy.githubusercontent.com # GitHub Copilot proxy
+  - default.exp-tas.com # GitHub Copilot experiments
+  - api.jetbrains.ai # JetBrains AI
+
+  # ===== AI Image Generation =====
+  - +.midjourney.com # Most popular AI art
+  - cdn.midjourney.com
+  - +.stability.ai # Stable Diffusion
+  - +.dreamstudio.ai # DreamStudio
+  - +.leonardo.ai # Leonardo AI
+  - +.krea.ai # Real-time AI art
+  - +.clipdrop.co # AI image tools
+  - +.openart.ai # AI art platform
+
+  # ===== AI Video Generation =====
+  - +.runwayml.com # RunwayML video AI
+  - +.synthesia.io # AI video avatars
+
+  # ===== AI Voice & Audio =====
+  - +.elevenlabs.io # AI voice synthesis
+
+  # ===== AI Model Platforms =====
+  - +.huggingface.co # AI model hub
+  - cdn-lfs.huggingface.co # Model file CDN
+  - +.replicate.com # AI model API platform
+
+  # ===== Enterprise AI =====
+  - +.cohere.com # Cohere AI
+  - +.cohere.ai
+  - +.mistral.ai # Mistral AI
+  - console.mistral.ai
+  - +.jasper.ai # Marketing AI
+
+  # ===== AI Search & Research =====
+  - +.you.com # You.com AI search
+  - +.phind.com # Developer AI search
+
+  # ===== AI Productivity Tools =====
+  - +.notion.ai # Notion AI
+  - notion-emulator.com
+  - +.gamma.app # AI presentation
+  - +.otter.ai # AI meeting notes
+
+  # ===== AI Development Platforms =====
+  - +.dify.ai # AI app builder
+  - gateway.ai.cloudflare.com # Cloudflare AI gateway
+
+  # ===== Meta AI =====
+  - +.meta.ai # Meta's AI assistant
+
+  # ===== DeepMind =====
   - +.deepmind.com
   - +.deepmind.google
-  - +.dify.ai
-  - +.geller-pa.googleapis.com
-  - +.gemini.google.com
-  - +.generativelanguage.googleapis.com
-  - +.grok.com
-  - +.groq.com
-  - +.jasper.ai
-  - +.makersuite.google.com
-  - +.meta.ai
-  - +.notebooklm.google.com
-  - +.oaistatic.com
-  - +.openart.ai
-  - +.perplexity.ai
-  - +.poe.com
-  - +.proactivebackend-pa.googleapis.com
-  - +.sora.com
-  - +.x.ai
+
+  # ===== AI Aggregators =====
+  - +.poe.com # Poe by Quora
+
+  # ===== AI Inference =====
+  - +.groq.com # Groq LPU inference

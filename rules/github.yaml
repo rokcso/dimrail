@@ -1,8 +1,39 @@
+# GitHub Services Domain Rules
+# Purpose: Ensure complete access to all GitHub services
+# Reference: https://docs.github.com/en/get-started/using-github/allowing-access-to-githubs-services-from-a-restricted-network
+
 payload:
-  - +.github.com
-  - +.github.io
-  - +.githubapp.com
-  - +.githubassets.com
-  - +.githubusercontent.com
-  - +.ghcr.io
-  - +.githubstatus.com
+  # ===== 核心服务 =====
+  - +.github.com # GitHub 主站
+  - +.github.io # GitHub Pages 静态托管
+  - +.github.dev # GitHub.dev 在线编辑器
+  - +.githubapp.com # GitHub Apps OAuth
+
+  # ===== 静态资源与用户内容 =====
+  - +.githubassets.com # 静态资源 CDN
+  - +.githubusercontent.com # 用户内容（raw 文件、头像等）
+  - +.actions.githubusercontent.com # GitHub Actions 资源
+  - +.github-releases.githubusercontent.com # Release 资源
+  - +.devcontainers.githubusercontent.com # Dev Containers 配置
+
+  # ===== GitHub Copilot =====
+  - +.copilot.githubusercontent.com # Copilot API
+  - +.copilot-proxy.githubusercontent.com # Copilot 代理服务
+
+  # ===== Packages & Container Registry =====
+  - +.ghcr.io # GitHub Container Registry
+  - +.pkg.github.com # GitHub Packages (npm/Maven/NuGet)
+
+  # ===== Codespaces =====
+  - +.online.visualstudio.com # Codespaces 编辑器后端
+
+  # ===== Enterprise & Education =====
+  - +.ghe.com # GitHub Enterprise Cloud
+  - +.education.github.com # GitHub Education
+
+  # ===== 监控与状态 =====
+  - +.githubstatus.com # 服务状态页面
+  - +.collector.github.com # 遥测数据收集
+
+  # ===== 第三方 CDN（用于 Release 下载） =====
+  - +.objects.githubusercontent.com # Git LFS 对象存储

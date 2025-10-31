@@ -1,29 +1,74 @@
+# Apple China Services Domain Rules
+# Purpose: Direct connection for Apple services that work well or are hosted in China
+# Note: Offshore-only services (News, Fitness+, etc.) should be in apple-offshore.yaml
+# Strategy: Use precise domains to avoid conflicts with apple-offshore.yaml
+
 payload:
+  # ===== Analytics & Telemetry =====
   - apple.comscoreresearch.com
-  - +.apple.com.cn
-  - +.aaplimg.com
-  - +.apple-cloudkit.com
-  - +.apple-dns.net
-  - +.apple-livephotoskit.com
-  - +.apple-mapkit.com
-  - +.apple-support.akadns.net
-  - +.apple.cn
-  - +.apple.co
-  - +.apple.com
-  - +.apple.com.cdn20.com
-  - +.apple.com.cn
-  - +.apple.com.edgekey.net
-  - +.apple.com.edgekey.net.globalredir.akadns.net
-  - +.apple.com.mwcloudcdn.com
-  - +.apple.com.mwcname.com
-  - +.apple.news
-  - +.appsto.re
-  - +.appstore.com
-  - +.cdn-apple.com
-  - +.crashlytics.com
-  - +.digicert.com
-  - +.itunes.com
-  - +.itunes.com.edgekey.net
-  - +.me.com
-  - +.mzstatic.com
-  - +.icloud.com.cn
+
+  # ===== Apple China Exclusive Domains =====
+  - +.apple.com.cn # Apple China official
+  - +.apple.cn # Apple China alternative
+  - +.icloud.com.cn # iCloud China (云上贵州)
+
+  # ===== Core Apple Services (Precise Subdomains) =====
+  - www.apple.com # Apple official website
+  - www.apple.com.cn # Apple China website
+  - appleid.apple.com # Apple ID authentication
+  - support.apple.com # Apple Support
+  - discussions.apple.com # Apple Discussions
+  - discussionschinese.apple.com # Chinese forum
+  - icloud.com # iCloud main domain
+  - init.icloud-content.com # iCloud initialization
+  - configuration.apple.com # Device configuration
+  - identity.apple.com # Identity services
+  - init.itunes.apple.com # iTunes initialization
+  - iosapps.itunes.apple.com # iOS app metadata
+  - +.apple.co # Apple short domain
+
+  # ===== App Store & iTunes =====
+  - +.appstore.com # App Store domain
+  - +.itunes.com # iTunes domain
+  - +.itunes.com.edgekey.net # iTunes CDN
+  - ax.itunes.apple.com # App Store resources
+  - search.itunes.apple.com # App Store search
+  - xp.apple.com # Experience API
+
+  # ===== iCloud & Services =====
+  - +.me.com # iCloud email & services
+  - p*-content.icloud.com # iCloud content (wildcard for p01-p99)
+
+  # ===== Content Delivery Networks (China Optimized) =====
+  - +.aaplimg.com # Datacenter routing
+  - +.cdn-apple.com # Firmware CDN
+  - +.apple.com.cdn20.com # China CDN (ChinaCache)
+  - +.apple.com.mwcloudcdn.com # China CDN (Meituan Cloud)
+  - +.apple.com.mwcname.com # China CDN (Meituan CNAME)
+  - +.mzstatic.com # Media static assets
+
+  # ===== Apple Services Infrastructure =====
+  - +.apple-dns.net # DNS infrastructure
+  - +.apple-livephotoskit.com # Live Photos
+  - +.apple-mapkit.com # MapKit JS
+
+  # ===== CDN & Edge Networks =====
+  - +.apple.com.edgekey.net # Akamai CDN
+  - +.apple.com.edgekey.net.globalredir.akadns.net # Akamai redirect
+  - +.apple-support.akadns.net # Support CDN
+
+  # ===== Security & Certificates =====
+  - +.crashlytics.com # Crash reporting (Firebase)
+  - +.digicert.com # Certificate validation
+  - ocsp.apple.com # Certificate revocation
+  - ocsp2.apple.com # Certificate revocation backup
+
+  # ===== Device Services =====
+  - captive.apple.com # Captive portal detection
+  - time.apple.com # Time synchronization
+  - time-ios.apple.com # iOS time sync
+  - time-macos.apple.com # macOS time sync
+
+  # ===== Apple Pay (China Specific) =====
+  - +.apple-pay.cn # Apple Pay China
+  - cn-apple-pay-gateway.apple.com # China payment gateway

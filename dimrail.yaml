@@ -325,8 +325,8 @@ rules:
   - RULE-SET,reject,REJECT
   - DOMAIN-SUFFIX,larksuite.com,DIRECT
   - RULE-SET,ai-offshore,AI Service
-  - RULE-SET,apple-offshore,Apple
   - RULE-SET,apple-cn,DIRECT
+  - RULE-SET,apple-offshore,Apple
   - RULE-SET,github,GitHub
   - RULE-SET,telegram,Telegram
   - RULE-SET,spotify,Spotify
