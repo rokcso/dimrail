@@ -4,3 +4,5 @@ payload:
   - +.githubapp.com
   - +.githubassets.com
   - +.githubusercontent.com
+  - +.ghcr.io
+  - +.githubstatus.com

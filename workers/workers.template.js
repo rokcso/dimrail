@@ -11,7 +11,28 @@ export default {
     // 检查 token 参数
     const token = url.searchParams.get("token");
     if (token !== SECRET_TOKEN) {
-      return new Response("Unauthorized - Invalid or missing token", {
+      const infoPage = `
+██████╗  ██╗ ███╗   ███╗ ██████╗   █████╗  ██╗ ██╗
+██╔══██╗ ██║ ████╗ ████║ ██╔══██╗ ██╔══██╗ ██║ ██║
+██║  ██║ ██║ ██╔████╔██║ ██████╔╝ ███████║ ██║ ██║
+██║  ██║ ██║ ██║╚██╔╝██║ ██╔══██╗ ██╔══██║ ██║ ██║
+██████╔╝ ██║ ██║ ╚═╝ ██║ ██║  ██║ ██║  ██║ ██║ ███████╗
+╚═════╝  ╚═╝ ╚═╝     ╚═╝ ╚═╝  ╚═╝ ╚═╝  ╚═╝ ╚═╝ ╚══════╝
+
+Dimrail - Stash Proxy Configuration
+
+This is a private Stash configuration service.
+Access requires a valid token.
+
+Usage:
+  ${url.origin}/?token=your-secret-token
+
+Project:
+  https://github.com/rokcso/dimrail
+
+Error: Unauthorized - Invalid or missing token
+`;
+      return new Response(infoPage, {
         status: 401,
         headers: {
           "Content-Type": "text/plain; charset=utf-8",

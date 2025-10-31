@@ -27,7 +27,7 @@ proxy-providers:
 proxy-groups:
   - name: 默认线路
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Proxy.png
-    type: fallback
+    type: select
     proxies:
       - 自动选择
       - HK 香港

@@ -19,6 +19,23 @@ def generate_secret_token(length=32):
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
+def extract_token_from_workers(workers_file):
+    """从已存在的 workers.js 文件中提取 SECRET_TOKEN"""
+    try:
+        with open(workers_file, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # 查找 const SECRET_TOKEN = "xxxxx";
+        import re
+
+        match = re.search(r'const SECRET_TOKEN = "([^"]+)";', content)
+        if match:
+            return match.group(1)
+    except:
+        pass
+    return None
+
+
 def main():
     print("🚀 Dimrail 配置生成器")
     print("-" * 60)
@@ -97,14 +114,25 @@ def main():
             workers_template = f.read()
         print("   ✓ Workers 模板加载成功")
 
-        # 步骤 6: 生成随机 SECRET_TOKEN
-        print("🔐 [6/7] 生成访问密钥...")
-        random_token = generate_secret_token(32)
-        print(f"   ✓ 随机生成的密钥: {random_token}")
-        print()
-        print("   💡 提示: 此密钥用于保护你的订阅链接")
-        print("      - 你可以使用这个随机生成的密钥")
-        print("      - 也可以在生成的 workers.js 中修改为自己的密钥")
+        # 步骤 6: 处理 SECRET_TOKEN
+        print("🔐 [6/7] 处理访问密钥...")
+
+        # 检查是否存在旧的 workers.js
+        existing_token = extract_token_from_workers(output_workers_file)
+
+        if existing_token:
+            # 复用旧 token
+            random_token = existing_token
+            print(f"   ✓ 检测到已有密钥，继续使用: {random_token}")
+            print("   💡 保持 token 不变，订阅地址无需更新")
+        else:
+            # 生成新 token
+            random_token = generate_secret_token(32)
+            print(f"   ✓ 随机生成新密钥: {random_token}")
+            print()
+            print("   💡 提示: 此密钥用于保护你的订阅链接")
+            print("      - 首次生成，请妥善保存此密钥")
+            print("      - 如需更换密钥，请删除 workers.js 后重新生成")
 
         # 步骤 7: 替换模板中的配置内容
         print()
