@@ -268,9 +268,9 @@ rule-providers:
     type: http
     behavior: domain
     format: yaml
-    url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/reject.yaml
+    url: https://anti-ad.net/clash.yaml
     path: ./rulset/reject.yaml
-    interval: 604800
+    interval: 86400
   ai-offshore:
     type: http
     behavior: domain
@@ -321,8 +321,8 @@ rule-providers:
 # 规则配置
 rules:
   - RULE-SET,lancidr,DIRECT
-  - RULE-SET,reject,REJECT
   - DOMAIN-SUFFIX,appsflyer.com,默认线路
+  - RULE-SET,reject,REJECT
   - DOMAIN-SUFFIX,larksuite.com,DIRECT
   - RULE-SET,ai-offshore,AI Service
   - RULE-SET,apple-offshore,Apple
