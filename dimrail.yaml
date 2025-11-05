@@ -333,6 +333,7 @@ rule-providers:
 # 规则配置
 rules:
   - RULE-SET,lancidr,DIRECT
+  - DOMAIN-SUFFIX,ahrefs.com,默认线路
   - DOMAIN-SUFFIX,appsflyer.com,默认线路
   - RULE-SET,reject,REJECT
   - DOMAIN-SUFFIX,larksuite.com,DIRECT
