@@ -1,0 +1,479 @@
+# Web3 Services Domain Rules
+# Purpose: Route Web3/Blockchain services that require stable overseas access
+# Updated: 2025-11-06
+# Categories: CEX, Wallets, DeFi, NFT Marketplaces, Blockchain Explorers, RPC Nodes
+
+payload:
+  # ===== Centralized Exchanges (中心化交易所 CEX) =====
+  # Binance (币安)
+  - +.binance.com
+  - +.binance.org
+  - +.binance.us
+  - +.binance.info
+  - +.binance.cloud
+  - +.binance.me
+  - +.bnbstatic.com # Binance CDN
+  - +.bnappzh.com # Binance App CN
+  - +.safepal.io # SafePal (Binance ecosystem)
+  - +.safepal.com
+  - accounts.binance.com
+  - www.binance.com
+  - api.binance.com
+  - stream.binance.com
+  - fapi.binance.com
+  - dapi.binance.com
+  - testnet.binance.vision
+
+  # OKX (欧易)
+  - +.okx.com
+  - +.okex.com # Legacy domain
+  - +.oklink.com # OKLink explorer
+  - +.okg.com
+  - www.okx.com
+  - www.okex.com
+  - static.okx.com
+
+  # Bybit
+  - +.bybit.com
+  - +.bybit.com.cdn.cloudflare.net
+  - +.bybdc3.com
+  - +.bytick.com
+  - api.bybit.com
+  - api.bytick.com
+  - stream.bybit.com
+  - www.bybit.com
+
+  # Bitget
+  - +.bitget.com
+  - +.bitget.info
+  - +.bitgetimg.com
+  - +.bitkeep.com # BitKeep wallet (Bitget ecosystem)
+  - +.bitkeep.org
+  - +.bitkeep.net
+  - api.bitget.com
+  - www.bitget.com
+
+  # Coinbase (Already in wallet section, adding exchange-specific)
+  - +.coinbase.com
+  - +.coinbasecloud.net
+  - +.coinbase-commerce.com
+  - pro.coinbase.com
+  - exchange.coinbase.com
+  - api.coinbase.com
+  - api-public.sandbox.coinbase.com
+
+  # Kraken
+  - +.kraken.com
+  - +.kraken-status.com
+  - api.kraken.com
+  - www.kraken.com
+
+  # KuCoin
+  - +.kucoin.com
+  - +.kucoin.cloud
+  - +.kucloudflare.com
+  - api.kucoin.com
+  - www.kucoin.com
+
+  # Gate.io
+  - +.gate.io
+  - +.gate.technology
+  - +.gateimg.com
+  - api.gate.io
+  - www.gate.io
+
+  # HTX (Huobi)
+  - +.htx.com
+  - +.huobi.com
+  - +.huobigroup.com
+  - +.hbfile.net
+  - api.htx.com
+  - www.htx.com
+
+  # Bitfinex
+  - +.bitfinex.com
+  - api.bitfinex.com
+  - www.bitfinex.com
+
+  # Crypto.com
+  - +.crypto.com
+  - +.crypto.org
+  - +.mona.co
+  - crypto.com
+
+  # Gemini
+  - +.gemini.com
+  - exchange.gemini.com
+  - api.gemini.com
+
+  # Bitstamp
+  - +.bitstamp.net
+  - www.bitstamp.net
+
+  # Bittrex
+  - +.bittrex.com
+  - global.bittrex.com
+
+  # MEXC
+  - +.mexc.com
+  - +.mexc.pro
+  - www.mexc.com
+
+  # Phemex
+  - +.phemex.com
+  - www.phemex.com
+
+  # BingX
+  - +.bingx.com
+  - +.bingbon.pro
+  - www.bingx.com
+
+  # Fiat24 (Crypto banking)
+  - +.fiat24.com
+  - app.fiat24.com
+  - www.fiat24.com
+
+  # ===== Wallets (钱包) =====
+  # MetaMask
+  - +.metamask.io
+  - +.metamask-institutional.io
+  - +.infura.io # MetaMask RPC provider
+
+  # WalletConnect
+  - +.walletconnect.com
+  - +.walletconnect.org
+
+  # Trust Wallet
+  - +.trustwallet.com
+  - +.trustwalletapp.com
+
+  # Phantom (Solana)
+  - +.phantom.app
+  - +.phantom.tech
+
+  # Rainbow Wallet
+  - +.rainbow.me
+
+  # Rabby Wallet
+  - +.rabby.io
+
+  # imToken
+  - +.token.im
+  - +.imtoken.im
+
+  # TokenPocket
+  - +.tokenpocket.pro
+
+  # Ledger
+  - +.ledger.com
+  - +.ledgerwallet.com
+
+  # Trezor
+  - +.trezor.io
+
+  # ===== DeFi Platforms (去中心化金融) =====
+  # Uniswap
+  - +.uniswap.org
+  - +.uniswap.finance
+  - app.uniswap.org
+
+  # Aave
+  - +.aave.com
+  - app.aave.com
+
+  # Compound
+  - +.compound.finance
+  - app.compound.finance
+
+  # Curve Finance
+  - +.curve.fi
+  - classic.curve.fi
+
+  # PancakeSwap
+  - +.pancakeswap.finance
+  - +.pancakeswap.com
+
+  # SushiSwap
+  - +.sushi.com
+
+  # 1inch
+  - +.1inch.io
+  - +.1inch.exchange
+  - app.1inch.io
+
+  # Balancer
+  - +.balancer.fi
+  - app.balancer.fi
+
+  # Yearn Finance
+  - +.yearn.finance
+  - yearn.fi
+
+  # dYdX
+  - +.dydx.exchange
+  - +.dydx.trade
+
+  # GMX
+  - +.gmx.io
+  - app.gmx.io
+
+  # Lido
+  - +.lido.fi
+  - stake.lido.fi
+
+  # MakerDAO
+  - +.makerdao.com
+  - +.oasis.app # MakerDAO frontend
+
+  # ===== NFT Marketplaces (NFT 市场) =====
+  # OpenSea
+  - +.opensea.io
+  - +.openseauserdata.com
+
+  # Blur
+  - +.blur.io
+
+  # LooksRare
+  - +.looksrare.org
+
+  # X2Y2
+  - +.x2y2.io
+
+  # Magic Eden
+  - +.magiceden.io
+  - +.magiceden.dev
+
+  # Rarible
+  - +.rarible.com
+
+  # Foundation
+  - +.foundation.app
+
+  # SuperRare
+  - +.superrare.com
+
+  # ===== Blockchain Explorers (区块链浏览器) =====
+  # Etherscan
+  - +.etherscan.io
+  - +.etherscan.com
+
+  # Polygonscan
+  - +.polygonscan.com
+
+  # BscScan
+  - +.bscscan.com
+
+  # Arbiscan
+  - +.arbiscan.io
+
+  # Optimistic Etherscan
+  - +.optimistic.etherscan.io
+
+  # Snowtrace (Avalanche)
+  - +.snowtrace.io
+  - +.avascan.info
+
+  # Solscan (Solana)
+  - +.solscan.io
+
+  # Blockchain.com
+  - +.blockchain.com
+  - +.blockchain.info
+
+  # Blockchair
+  - +.blockchair.com
+
+  # ===== RPC & Infrastructure (节点与基础设施) =====
+  # Alchemy
+  - +.alchemy.com
+  - +.alchemyapi.io
+
+  # Infura (已在 MetaMask 部分)
+
+  # QuickNode
+  - +.quicknode.com
+  - +.quiknode.pro
+
+  # Ankr
+  - +.ankr.com
+  - rpc.ankr.com
+
+  # Chainstack
+  - +.chainstack.com
+
+  # Moralis
+  - +.moralis.io
+
+  # The Graph
+  - +.thegraph.com
+  - +.thegraph.market
+
+  # ===== Layer 2 Solutions =====
+  # Polygon
+  - +.polygon.technology
+  - +.matic.network
+
+  # Arbitrum
+  - +.arbitrum.io
+  - +.arbitrum.foundation
+  - bridge.arbitrum.io
+
+  # Optimism
+  - +.optimism.io
+  - app.optimism.io
+  - bridge.optimism.io
+
+  # zkSync
+  - +.zksync.io
+  - portal.zksync.io
+
+  # Base (Coinbase L2)
+  - +.base.org
+  - bridge.base.org
+
+  # Starknet
+  - +.starknet.io
+
+  # ===== DAO & Governance (DAO 与治理) =====
+  # Snapshot
+  - +.snapshot.org
+  - +.snapshot.page
+
+  # Tally
+  - +.tally.xyz
+  - +.withtally.com
+
+  # Aragon
+  - +.aragon.org
+
+  # ===== DEX Aggregators (DEX 聚合器) =====
+  # Matcha (0x)
+  - +.matcha.xyz
+
+  # ParaSwap
+  - +.paraswap.io
+
+  # CowSwap
+  - +.cow.fi
+  - swap.cow.fi
+
+  # ===== Bridge Services (跨链桥) =====
+  # Across
+  - +.across.to
+
+  # Hop Protocol
+  - +.hop.exchange
+  - app.hop.exchange
+
+  # Stargate
+  - +.stargate.finance
+
+  # Synapse
+  - +.synapseprotocol.com
+
+  # Orbiter Finance
+  - +.orbiter.finance
+
+  # ===== ENS & Identity (域名与身份) =====
+  # ENS
+  - +.ens.domains
+  - app.ens.domains
+
+  # Unstoppable Domains
+  - +.unstoppabledomains.com
+
+  # ===== Web3 Social & Communication =====
+  # Lens Protocol
+  - +.lens.xyz
+  - +.lens.dev
+
+  # Farcaster
+  - +.farcaster.xyz
+  - +.warpcast.com
+
+  # Mirror
+  - +.mirror.xyz
+
+  # ===== Data & Analytics (数据与分析) =====
+  # DeFi Llama
+  - +.defillama.com
+
+  # Dune Analytics
+  - +.dune.com
+  - +.dune.xyz
+
+  # Nansen
+  - +.nansen.ai
+
+  # DeBank
+  - +.debank.com
+
+  # Zapper
+  - +.zapper.fi
+  - +.zapper.xyz
+
+  # Zerion
+  - +.zerion.io
+
+  # ===== Developer Tools (开发工具) =====
+  # Remix IDE
+  - +.remix.ethereum.org
+
+  # Hardhat
+  - +.hardhat.org
+
+  # Tenderly
+  - +.tenderly.co
+  - +.tenderly.dev
+
+  # ===== IPFS & Storage (去中心化存储) =====
+  # IPFS
+  - +.ipfs.io
+  - +.ipfs.tech
+  - +.ipfs.network
+
+  # Filecoin
+  - +.filecoin.io
+
+  # Arweave
+  - +.arweave.org
+  - +.arweave.net
+
+  # Pinata
+  - +.pinata.cloud
+
+  # NFT.Storage
+  - +.nft.storage
+
+  # ===== Other Chains (其他公链) =====
+  # Solana
+  - +.solana.com
+  - +.solana.foundation
+
+  # Avalanche
+  - +.avax.network
+  - +.avalabs.org
+
+  # Near Protocol
+  - +.near.org
+  - +.near.ai
+
+  # Cosmos
+  - +.cosmos.network
+
+  # Polkadot
+  - +.polkadot.network
+  - +.polkadot.js.org
+
+  # ===== Misc Services =====
+  # WalletConnect Cloud
+  - relay.walletconnect.com
+  - relay.walletconnect.org
+
+  # IPFS Gateways
+  - gateway.ipfs.io
+  - cloudflare-ipfs.com
+  - dweb.link
+
+  # Web3 Auth
+  - +.web3auth.io
