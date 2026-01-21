@@ -354,6 +354,8 @@ rule-providers:
 # 规则配置
 rules:
   - RULE-SET,lancidr,DIRECT
+  - GEOSITE,cn,DIRECT
+  - GEOIP,CN,DIRECT
   - DOMAIN-SUFFIX,ahrefs.com,默认线路
   - DOMAIN-SUFFIX,appsflyer.com,默认线路
   # - RULE-SET,reject,REJECT
@@ -366,8 +368,6 @@ rules:
   - RULE-SET,telegram,Telegram
   - RULE-SET,spotify,Spotify
   - RULE-SET,youtube,YouTube
-  - GEOSITE,cn,DIRECT
-  - GEOIP,CN,DIRECT
   - MATCH,默认线路
 
 # 规则模式：rule/global/direct
@@ -375,7 +375,7 @@ mode: rule
 
 # 5 个日志级别：silent/info/warning/error/debug
 # 日志级别越高日志输出量越大，越倾向于调试，若需要请自行开启
-log-level: info
+log-level: warning
 
 # DNS 服务器配置
 dns:
@@ -406,5 +406,17 @@ dns:
     - "opencloud.wostore.cn"
     - "auth.wosms.cn"
     - "+.10099.com.cn"
+    - "+.ixigua.com" # 西瓜视频
+    - "+.douyin.com" # 抖音
+    - "+.toutiao.com" # 今日头条
+    - "+.snssdk.com" # 字节跳动CDN
+    - "+.byteimg.com" # 字节图片CDN
+    - "+.pstatp.com" # 字节静态资源
+    - "+.music.163.com" # 网易云音乐
+    - "+.126.net" # 网易CDN
+    - "+.qq.com" # 腾讯系
+    - "*.weixin.qq.com" # 微信
   respect-rules: true
-  # ipv6: false
+  enhanced-mode: fake-ip # 确保启用Fake IP
+  fake-ip-range: 198.18.0.0/16
+  ipv6: false
