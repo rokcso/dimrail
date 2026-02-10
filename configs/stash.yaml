@@ -269,7 +269,7 @@ proxy-groups:
   - name: HK-Auto
     hidden: true
     type: url-test
-    interval: 300
+    interval: 600
     timeout: 5
     lazy: true
     tolerance: 100
@@ -286,7 +286,7 @@ proxy-groups:
   - name: SG-Auto
     hidden: true
     type: url-test
-    interval: 300
+    interval: 600
     timeout: 5
     lazy: true
     tolerance: 100
@@ -303,7 +303,7 @@ proxy-groups:
   - name: JP-Auto
     hidden: true
     type: url-test
-    interval: 300
+    interval: 600
     timeout: 5
     lazy: true
     tolerance: 100
@@ -320,7 +320,7 @@ proxy-groups:
   - name: TW-Auto
     hidden: true
     type: url-test
-    interval: 300
+    interval: 600
     timeout: 5
     lazy: true
     tolerance: 100
@@ -337,7 +337,7 @@ proxy-groups:
   - name: US-Auto
     hidden: true
     type: url-test
-    interval: 300
+    interval: 600
     timeout: 5
     lazy: true
     tolerance: 100
@@ -354,7 +354,7 @@ proxy-groups:
   - name: UK-Auto
     hidden: true
     type: url-test
-    interval: 300
+    interval: 600
     timeout: 5
     lazy: true
     tolerance: 100
@@ -364,7 +364,7 @@ proxy-groups:
   - name: 流媒体专用
     hidden: true
     type: url-test
-    interval: 300
+    interval: 600
     timeout: 5
     lazy: true
     tolerance: 100
@@ -381,7 +381,7 @@ proxy-groups:
   - name: 其他-Auto
     hidden: true
     type: url-test
-    interval: 300
+    interval: 600
     timeout: 5
     lazy: true
     tolerance: 100
@@ -392,7 +392,7 @@ proxy-groups:
   - name: 自动选择
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Auto.png
     type: url-test
-    interval: 300
+    interval: 600
     timeout: 5
     lazy: true
     tolerance: 100
