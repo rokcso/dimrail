@@ -21,41 +21,118 @@ dns:
   # 是否开启 IPv6 解析
   ipv6: false
   default-nameserver:
+    - 114.114.114.114
     - 119.29.29.29
     - 223.5.5.5
   nameserver:
+    - tls://223.5.5.5:853
+    - tls://223.6.6.6:853
     - https://dns.alidns.com/dns-query
     - https://doh.pub/dns-query
-  # 在以下列表的域名将不会被解析为 fake ip，这些域名相关的解析请求将会返回它们真实的 IP 地址
-  fake-ip-filter:
-    # - "*"
-    - "*.lan"
-    - "*.local"
-    - "localhost.ptlogin2.qq.com"
-    - "+.srv.nintendo.net"
-    - "+.stun.playstation.net"
-    - "xbox.*.microsoft.com"
-    - "+.xboxlive.com"
-    - "+.cmpassport.com"
-    - "id6.me"
-    - "open.e.189.cn"
-    - "mdn.open.wo.cn"
-    - "opencloud.wostore.cn"
-    - "auth.wosms.cn"
-    - "+.10099.com.cn"
-    - "+.ixigua.com" # 西瓜视频
-    - "+.douyin.com" # 抖音
-    - "+.toutiao.com" # 今日头条
-    - "+.snssdk.com" # 字节跳动CDN
-    - "+.byteimg.com" # 字节图片CDN
-    - "+.pstatp.com" # 字节静态资源
-    - "+.music.163.com" # 网易云音乐
-    - "+.126.net" # 网易CDN
-    - "+.qq.com" # 腾讯系
-    - "*.weixin.qq.com" # 微信
   respect-rules: true
   enhanced-mode: fake-ip # 确保启用Fake IP
   fake-ip-range: 198.18.0.0/16
+  # 在以下列表的域名将不会被解析为 fake ip，这些域名相关的解析请求将会返回它们真实的 IP 地址
+  fake-ip-filter:
+    - "*.lan"
+    - "*.localdomain"
+    - "*.example"
+    - "*.invalid"
+    - "*.localhost"
+    - "*.test"
+    - "*.local"
+    - "*.home.arpa"
+    - time.*.com
+    - time.*.gov
+    - time.*.edu.cn
+    - time.*.apple.com
+    - time1.*.com
+    - time2.*.com
+    - time3.*.com
+    - time4.*.com
+    - time5.*.com
+    - time6.*.com
+    - time7.*.com
+    - ntp.*.com
+    - ntp1.*.com
+    - ntp2.*.com
+    - ntp3.*.com
+    - ntp4.*.com
+    - ntp5.*.com
+    - ntp6.*.com
+    - ntp7.*.com
+    - "*.time.edu.cn"
+    - "*.ntp.org.cn"
+    - "+.pool.ntp.org"
+    - time1.cloud.tencent.com
+    - music.163.com
+    - "*.music.163.com"
+    - "*.126.net"
+    - musicapi.taihe.com
+    - music.taihe.com
+    - songsearch.kugou.com
+    - trackercdn.kugou.com
+    - "*.kuwo.cn"
+    - api-jooxtt.sanook.com
+    - api.joox.com
+    - joox.com
+    - y.qq.com
+    - "*.y.qq.com"
+    - streamoc.music.tc.qq.com
+    - mobileoc.music.tc.qq.com
+    - isure.stream.qqmusic.qq.com
+    - dl.stream.qqmusic.qq.com
+    - aqqmusic.tc.qq.com
+    - amobile.music.tc.qq.com
+    - "*.xiami.com"
+    - "*.music.migu.cn"
+    - music.migu.cn
+    - "+.msftconnecttest.com"
+    - "+.msftncsi.com"
+    - msftconnecttest.com
+    - msftncsi.com
+    - localhost.ptlogin2.qq.com
+    - localhost.sec.qq.com
+    - "+.srv.nintendo.net"
+    - "+.stun.playstation.net"
+    - xbox.*.microsoft.com
+    - xnotify.xboxmojie.app
+    - "+.ipv6.microsoft.com"
+    - "+.battlenet.com.cn"
+    - "+.wotgame.cn"
+    - "+.wggames.cn"
+    - "+.wowsgame.cn"
+    - "+.wargaming.net"
+    - proxy.golang.org
+    - stun.*.*
+    - stun.*.*.*
+    - "+.stun.*.*"
+    - "+.stun.*.*.*"
+    - "+.stun.*.*.*.*"
+    - heartbeat.belkin.com
+    - "*.linksys.com"
+    - "*.linksyssmartwifi.com"
+    - "*.router.asus.com"
+    - mesu.apple.com
+    - swscan.apple.com
+    - swquery.apple.com
+    - swdownload.apple.com
+    - swcdn.apple.com
+    - swdist.apple.com
+    - lens.l.google.com
+    - stun.l.google.com
+    - "*.square-enix.com"
+    - "*.finalfantasyxiv.com"
+    - "*.ffxiv.com"
+    - "*.ff14.sdo.com"
+    - ff.dorado.sdo.com
+    - "*.mcdn.bilivideo.cn"
+    - "+.media.dssott.com"
+    - "+.pvp.net"
+
+http:
+  url-rewrite:
+    - ^https?://(www\.)?(g|google)\.cn https://www.google.com 302
 
 # 代理服务提供商
 proxy-providers:
