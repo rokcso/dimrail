@@ -156,6 +156,11 @@ proxy-providers:
     interval: 10800
     benchmark-url: http://www.gstatic.com/generate_204
     benchmark-timeout: 10
+  ProxyProviderC:
+    url: https://rokcso.com/ # 用你的订阅链接替换
+    interval: 10800
+    benchmark-url: http://www.gstatic.com/generate_204
+    benchmark-timeout: 10
 
 # 代理组
 proxy-groups:
