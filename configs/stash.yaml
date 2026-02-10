@@ -412,49 +412,49 @@ rule-providers:
     behavior: ipcidr
     format: yaml
     url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/lancidr.yaml
-    path: ./rulset/lancidr.yaml
+    path: ./rules/lancidr.yaml
     interval: 604800
   reject:
     type: http
     behavior: domain
     format: yaml
     url: https://anti-ad.net/clash.yaml
-    path: ./rulset/reject.yaml
+    path: ./rules/reject.yaml
     interval: 86400
   ai-offshore:
     type: http
     behavior: domain
     format: yaml
     url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/ai-offshore.yaml
-    path: ./rulset/ai-offshore.yaml
+    path: ./rules/ai-offshore.yaml
     interval: 604800
   apple-offshore:
     type: http
     behavior: domain
     format: yaml
     url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/apple-offshore.yaml
-    path: ./rulset/apple-offshore.yaml
+    path: ./rules/apple-offshore.yaml
     interval: 604800
   apple-cn:
     type: http
     behavior: domain
     format: yaml
     url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/apple-cn.yaml
-    path: ./rulset/apple-cn.yaml
+    path: ./rules/apple-cn.yaml
     interval: 604800
   github:
     type: http
     behavior: domain
     format: yaml
     url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/github.yaml
-    path: ./rulset/github.yaml
+    path: ./rules/github.yaml
     interval: 604800
   web3:
     type: http
     behavior: domain
     format: yaml
     url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/web3.yaml
-    path: ./rulset/web3.yaml
+    path: ./rules/web3.yaml
     interval: 604800
   telegram:
     type: http

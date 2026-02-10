@@ -1,7 +1,5 @@
 # Dimrail - Git Ignore File
 
-ref/
-
 # 私有配置文件（包含真实订阅链接）
 config.private.yaml
 *.private.yaml
