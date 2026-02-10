@@ -44,7 +44,7 @@ def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
     # 文件路径
-    template_file = os.path.join(os.path.dirname(script_dir), "dimrail.yaml")
+    template_file = os.path.join(os.path.dirname(script_dir), "configs", "stash.yaml")
     private_file = os.path.join(script_dir, "config.private.yaml")
     workers_template_file = os.path.join(script_dir, "workers.template.js")
     output_workers_file = os.path.join(script_dir, "workers.js")
