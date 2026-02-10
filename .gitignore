@@ -6,6 +6,7 @@ config.private.yaml
 
 # 生成的文件
 workers/workers.js
+workers/*-workers.js
 dimrail.generated.yaml
 *.generated.yaml
 

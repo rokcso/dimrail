@@ -12,13 +12,7 @@ proxy-providers:
   # 代理提供商 A
   ProxyProviderA:
     url: https://example.com/sub # 替换为你的真实订阅链接
-    interval: 10800 # 更新间隔（秒），10800 = 3小时
-    benchmark-url: http://www.gstatic.com/generate_204
-    benchmark-timeout: 10
 
   # 代理提供商 B（如果有多个订阅源）
   ProxyProviderB:
     url: https://example.com/sub # 替换为你的真实订阅链接
-    interval: 10800
-    benchmark-url: http://www.gstatic.com/generate_204
-    benchmark-timeout: 10

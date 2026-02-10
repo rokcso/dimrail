@@ -3,6 +3,7 @@
 """
 Dimrail 配置生成脚本
 功能: 合并模板配置和私有订阅，生成可部署的 Cloudflare workers 脚本
+支持: Stash / Clash 配置类型
 """
 
 import yaml
@@ -10,6 +11,7 @@ import os
 import sys
 import secrets
 import string
+import argparse
 
 
 def generate_secret_token(length=32):
@@ -37,23 +39,43 @@ def extract_token_from_workers(workers_file):
 
 
 def main():
-    print("🚀 Dimrail 配置生成器")
+    # Parse arguments
+    parser = argparse.ArgumentParser(
+        description="Dimrail 配置生成器 - 生成 Cloudflare Workers 脚本",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+示例:
+  python3 generate.py              # 默认生成 Stash 配置
+  python3 generate.py --type stash # 生成 Stash 配置
+  python3 generate.py --type clash # 生成 Clash 配置
+        """
+    )
+    parser.add_argument(
+        "--type",
+        choices=["stash", "clash"],
+        default="stash",
+        help="配置类型: stash (默认) 或 clash",
+    )
+    args = parser.parse_args()
+
+    config_type = args.type.upper()
+    print(f"🚀 Dimrail 配置生成器 ({config_type})")
     print("-" * 60)
 
     # 获取脚本所在目录
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
     # 文件路径
-    template_file = os.path.join(os.path.dirname(script_dir), "configs", "stash.yaml")
+    template_file = os.path.join(os.path.dirname(script_dir), "configs", f"{args.type}.yaml")
     private_file = os.path.join(script_dir, "config.private.yaml")
     workers_template_file = os.path.join(script_dir, "workers.template.js")
-    output_workers_file = os.path.join(script_dir, "workers.js")
+    output_workers_file = os.path.join(script_dir, f"{args.type}-workers.js")
 
     # 检查文件是否存在
     if not os.path.exists(template_file):
         print(f"❌ 错误: 找不到模板文件")
         print(f"   路径: {template_file}")
-        print(f"💡 提示: 请确保在项目根目录下有 dimrail.yaml 文件")
+        print(f"💡 提示: 请确保 configs/{args.type}.yaml 文件存在")
         sys.exit(1)
 
     if not os.path.exists(private_file):
@@ -89,9 +111,16 @@ def main():
         # 步骤 3: 合并配置
         print("🔄 [3/6] 合并配置信息...")
         if "proxy-providers" in private_config:
+            # 只更新 url，保留模板中的其他配置（interval、benchmark-url 等）
+            for provider_name, provider_config in private_config["proxy-providers"].items():
+                if provider_name not in template_config.get("proxy-providers", {}):
+                    # 如果模板中没有这个 provider，完整复制
+                    template_config.setdefault("proxy-providers", {})[provider_name] = provider_config
+                elif "url" in provider_config:
+                    # 如果模板中已有这个 provider，只更新 url
+                    template_config["proxy-providers"][provider_name]["url"] = provider_config["url"]
             providers_count = len(private_config["proxy-providers"])
-            template_config["proxy-providers"] = private_config["proxy-providers"]
-            print(f"   ✓ 已合并 {providers_count} 个代理提供商")
+            print(f"   ✓ 已更新 {providers_count} 个代理提供商的订阅链接")
         else:
             print("   ⚠️  警告: 私有配置中没有找到 proxy-providers 字段")
             print("   请检查 config.private.yaml 文件格式是否正确")
@@ -117,8 +146,13 @@ def main():
         # 步骤 6: 处理 SECRET_TOKEN
         print("🔐 [6/7] 处理访问密钥...")
 
-        # 检查是否存在旧的 workers.js
-        existing_token = extract_token_from_workers(output_workers_file)
+        # 检查是否存在旧的 workers 文件（支持多种命名方式）
+        existing_token = (
+            extract_token_from_workers(output_workers_file) or
+            extract_token_from_workers(os.path.join(script_dir, "workers.js")) or
+            extract_token_from_workers(os.path.join(script_dir, "stash-workers.js")) or
+            extract_token_from_workers(os.path.join(script_dir, "clash-workers.js"))
+        )
 
         if existing_token:
             # 复用旧 token
