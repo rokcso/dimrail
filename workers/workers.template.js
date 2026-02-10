@@ -19,9 +19,9 @@ export default {
 ██████╔╝ ██║ ██║ ╚═╝ ██║ ██║  ██║ ██║  ██║ ██║ ███████╗
 ╚═════╝  ╚═╝ ╚═╝     ╚═╝ ╚═╝  ╚═╝ ╚═╝  ╚═╝ ╚═╝ ╚══════╝
 
-Dimrail - Stash Proxy Configuration
+Dimrail - Clash/Stash Proxy Configuration
 
-This is a private Stash configuration service.
+This is a private Clash/Stash configuration service.
 Access requires a valid token.
 
 Usage:

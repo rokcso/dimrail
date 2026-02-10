@@ -7,7 +7,7 @@
 ╚═════╝  ╚═╝ ╚═╝     ╚═╝ ╚═╝  ╚═╝ ╚═╝  ╚═╝ ╚═╝ ╚══════╝
 ```
 
-一个精心设计的 Stash 代理配置项目（纯自用），提供智能分流规则和 Cloudflare Workers 部署方案。
+一个精心设计的 Clash/Stash 代理配置项目（纯自用），提供智能分流规则和 Cloudflare Workers 部署方案。
 
 ## 本地使用
 
@@ -30,7 +30,7 @@ proxy-providers:
     url: https://your-subscription-url-here  # 替换这里
 ```
 
-然后在 Stash 中导入 `dimrail.yaml` 即可。
+然后在 Stash 中导入 `configs/stash.yaml` 即可。
 
 ## Cloudflare Workers 部署
 
