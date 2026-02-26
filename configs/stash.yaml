@@ -14,7 +14,7 @@
 mode: rule
 # 日志级别：silent/info/warning/error/debug
 # 日志级别越高日志输出量越大，越倾向于调试，若需要请自行开启
-log-level: warning
+log-level: debug
 
 # DNS 配置
 dns:
