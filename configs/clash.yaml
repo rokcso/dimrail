@@ -1,7 +1,7 @@
 # Dimrail: Clash Config by rokcso
 # GitHub: https://github.com/rokcso/dimrail
 # Author: https://rokcso.com
-# Update: 2026-02-10
+# Update: 2026-02-26
 
 # ██████╗  ██╗ ███╗   ███╗ ██████╗   █████╗  ██╗ ██╗
 # ██╔══██╗ ██║ ████╗ ████║ ██╔══██╗ ██╔══██╗ ██║ ██║
@@ -9,3 +9,640 @@
 # ██║  ██║ ██║ ██║╚██╔╝██║ ██╔══██╗ ██╔══██║ ██║ ██║
 # ██████╔╝ ██║ ██║ ╚═╝ ██║ ██║  ██║ ██║  ██║ ██║ ███████╗
 # ╚═════╝  ╚═╝ ╚═╝     ╚═╝ ╚═╝  ╚═╝ ╚═╝  ╚═╝ ╚═╝ ╚══════╝
+
+# ========== Basic Settings ==========
+# Mixed port for HTTP and SOCKS5
+mixed-port: 7890
+# Allow LAN connections
+allow-lan: true
+bind-address: "*"
+# Run mode: rule/global/direct
+mode: rule
+# Log level: silent/info/warning/error/debug
+log-level: info
+# Enable IPv6
+ipv6: false
+
+# ========== External Controller ==========
+# RESTful API for Web UI
+external-controller: 0.0.0.0:9090
+# Web UI directory (optional)
+# external-ui: ./ui
+# API secret (set your own password)
+secret: ""
+
+# ========== GeoData Settings ==========
+geodata-mode: true
+geodata-loader: memconservative
+geo-auto-update: true
+geo-update-interval: 24
+
+# ========== Performance Settings ==========
+tcp-concurrent: true
+unified-delay: true
+
+# ========== TUN Mode (Transparent Proxy) ==========
+tun:
+  enable: true
+  stack: system
+  auto-route: true
+  auto-detect-interface: true
+  dns-hijack:
+    - any:53
+    - tcp://any:53
+
+# ========== DNS Configuration ==========
+dns:
+  enable: true
+  ipv6: false
+  listen: 0.0.0.0:1053
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.0/16
+  fake-ip-filter:
+    # ========== Local Network ==========
+    - "*.lan"
+    - "*.localdomain"
+    - "*.example"
+    - "*.invalid"
+    - "*.localhost"
+    - "*.test"
+    - "*.local"
+    - "*.home.arpa"
+    - "*.corp"
+    - "*.internal"
+
+    # ========== Time/NTP Services ==========
+    - "+.pool.ntp.org"
+    - "+.ntp.org.cn"
+    - "+.time.edu.cn"
+    - "+.time.apple.com"
+    - "time1.cloud.tencent.com"
+    - "time.windows.com"
+    - "time.nist.gov"
+
+    # ========== Network Connectivity Check ==========
+    - "+.msftconnecttest.com"
+    - "+.msftncsi.com"
+    - "captive.apple.com"
+    - "detectportal.firefox.com"
+    - "*.connectivitycheck.gstatic.com"
+    - "clients3.google.com"
+    - "clients4.google.com"
+
+    # ========== Music Streaming ==========
+    - "music.163.com"
+    - "*.music.163.com"
+    - "*.126.net"
+    - "musicapi.taihe.com"
+    - "music.taihe.com"
+    - "songsearch.kugou.com"
+    - "trackercdn.kugou.com"
+    - "*.kuwo.cn"
+    - "api-jooxtt.sanook.com"
+    - "api.joox.com"
+    - "joox.com"
+    - "y.qq.com"
+    - "*.y.qq.com"
+    - "streamoc.music.tc.qq.com"
+    - "mobileoc.music.tc.qq.com"
+    - "isure.stream.qqmusic.qq.com"
+    - "dl.stream.qqmusic.qq.com"
+    - "aqqmusic.tc.qq.com"
+    - "amobile.music.tc.qq.com"
+    - "*.xiami.com"
+    - "*.music.migu.cn"
+    - "music.migu.cn"
+
+    # ========== Gaming Platforms ==========
+    - "+.srv.nintendo.net"
+    - "+.stun.playstation.net"
+    - "+.stun.*.*"
+    - "xbox.*.microsoft.com"
+    - "xnotify.xboxmojie.app"
+    - "+.ipv6.microsoft.com"
+    - "+.battlenet.com.cn"
+    - "+.wotgame.cn"
+    - "+.wggames.cn"
+    - "+.wowsgame.cn"
+    - "+.wargaming.net"
+    - "+.pvp.net"
+    - "*.square-enix.com"
+    - "*.finalfantasyxiv.com"
+    - "*.ffxiv.com"
+    - "*.ff14.sdo.com"
+    - "ff.dorado.sdo.com"
+
+    # ========== Router Management ==========
+    - "heartbeat.belkin.com"
+    - "*.linksys.com"
+    - "*.linksyssmartwifi.com"
+    - "*.router.asus.com"
+    - "*.hiwifi.com"
+    - "*.miwifi.com"
+    - "*.routerlogin.com"
+    - "*.mymeraki.com"
+    - "*.gl-inet.com"
+
+    # ========== Apple Services ==========
+    - "mesu.apple.com"
+    - "swscan.apple.com"
+    - "swquery.apple.com"
+    - "swdownload.apple.com"
+    - "swcdn.apple.com"
+    - "swdist.apple.com"
+    - "*.apple.com.edgesuite.net"
+    - "push-apple.com.akadns.net"
+
+    # ========== Tencent Related ==========
+    - "localhost.ptlogin2.qq.com"
+    - "localhost.sec.qq.com"
+
+    # ========== Others ==========
+    - "proxy.golang.org"
+    - "lens.l.google.com"
+    - "stun.l.google.com"
+    - "*.mcdn.bilivideo.cn"
+    - "+.media.dssott.com"
+
+  default-nameserver:
+    - 114.114.114.114
+    - 119.29.29.29
+    - 223.5.5.5
+  nameserver:
+    - tls://223.5.5.5:853
+    - tls://223.6.6.6:853
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
+  fallback:
+    - tls://8.8.8.8:853
+    - tls://1.1.1.1:853
+    - https://dns.google/dns-query
+    - https://cloudflare-dns.com/dns-query
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+    ipcidr:
+      - 240.0.0.0/4
+
+# ========== Proxy Providers ==========
+proxy-providers:
+  ProxyProviderA:
+    type: http
+    url: https://rokcso.com/
+    interval: 10800
+    path: ./providers/ProxyProviderA.yaml
+    health-check:
+      enable: true
+      interval: 300
+      url: http://www.gstatic.com/generate_204
+  ProxyProviderB:
+    type: http
+    url: https://rokcso.com/
+    interval: 10800
+    path: ./providers/ProxyProviderB.yaml
+    health-check:
+      enable: true
+      interval: 300
+      url: http://www.gstatic.com/generate_204
+  ProxyProviderC:
+    type: http
+    url: https://rokcso.com/
+    interval: 10800
+    path: ./providers/ProxyProviderC.yaml
+    health-check:
+      enable: true
+      interval: 300
+      url: http://www.gstatic.com/generate_204
+
+# ========== Proxy Groups ==========
+proxy-groups:
+  - name: 默认线路
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Proxy.png
+    type: select
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    proxies:
+      - 自动选择
+      - HK 香港
+      - SG 新加坡
+      - JP 日本
+      - TW 台湾
+      - US 美国
+      - UK 英国
+      - 其他线路
+      - DIRECT
+
+  - name: AI Service
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/AI.png
+    type: select
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    proxies:
+      - US 美国
+      - UK 英国
+      - SG 新加坡
+      - JP 日本
+      - HK 香港
+      - TW 台湾
+      - 其他线路
+      - 手动选择
+
+  - name: Apple
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Apple.png
+    type: select
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    proxies:
+      - HK 香港
+      - US 美国
+      - SG 新加坡
+      - JP 日本
+      - TW 台湾
+      - UK 英国
+      - 其他线路
+      - 手动选择
+
+  - name: Telegram
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Telegram.png
+    type: select
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    proxies:
+      - SG 新加坡
+      - HK 香港
+      - JP 日本
+      - TW 台湾
+      - US 美国
+      - UK 英国
+      - 其他线路
+      - 手动选择
+
+  - name: Spotify
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Spotify.png
+    type: select
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    proxies:
+      - 流媒体专用
+      - HK 香港
+      - SG 新加坡
+      - US 美国
+      - JP 日本
+      - TW 台湾
+      - UK 英国
+      - 其他线路
+      - 手动选择
+
+  - name: YouTube
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/YouTube.png
+    type: select
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    proxies:
+      - 流媒体专用
+      - HK 香港
+      - SG 新加坡
+      - TW 台湾
+      - JP 日本
+      - US 美国
+      - UK 英国
+      - 其他线路
+      - 手动选择
+
+  - name: GitHub
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/GitHub.png
+    type: select
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    proxies:
+      - HK 香港
+      - SG 新加坡
+      - JP 日本
+      - TW 台湾
+      - US 美国
+      - UK 英国
+      - 其他线路
+      - 手动选择
+      - DIRECT
+
+  - name: Web3
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Cryptocurrency.png
+    type: select
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    proxies:
+      - US 美国
+      - SG 新加坡
+      - HK 香港
+      - JP 日本
+      - UK 英国
+      - TW 台湾
+      - 其他线路
+      - 手动选择
+      - DIRECT
+
+  # ========== Region-based Groups ==========
+  - name: HK 香港
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Hong_Kong.png
+    type: select
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    filter: "(?i)(澳门|🇲🇴|Macau|Macao|香港|🇭🇰|Hong Kong|HK|HKG)"
+    proxies:
+      - HK-Auto
+  - name: HK-Auto
+    hidden: true
+    type: url-test
+    interval: 600
+    timeout: 5000
+    lazy: true
+    tolerance: 100
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    filter: "(?i)(澳门|🇲🇴|Macau|Macao|香港|🇭🇰|Hong Kong|HK|HKG)"
+
+  - name: SG 新加坡
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Singapore.png
+    type: select
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    filter: "新加坡|坡|狮城|🇸🇬|SG|(?i)Singapore"
+    proxies:
+      - SG-Auto
+  - name: SG-Auto
+    hidden: true
+    type: url-test
+    interval: 600
+    timeout: 5000
+    lazy: true
+    tolerance: 100
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    filter: "新加坡|坡|狮城|🇸🇬|SG|(?i)Singapore"
+
+  - name: JP 日本
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Japan.png
+    type: select
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    filter: "(?i)(日本|🇯🇵|东京|大阪|JP|Japan|Tokyo|Osaka)"
+    proxies:
+      - JP-Auto
+  - name: JP-Auto
+    hidden: true
+    type: url-test
+    interval: 600
+    timeout: 5000
+    lazy: true
+    tolerance: 100
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    filter: "(?i)(日本|🇯🇵|东京|大阪|JP|Japan|Tokyo|Osaka)"
+
+  - name: TW 台湾
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Taiwan.png
+    type: select
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    filter: "(?i)(台湾|🇹🇼|TW|Taiwan|台-|台_|Taipei|TPE)"
+    proxies:
+      - TW-Auto
+  - name: TW-Auto
+    hidden: true
+    type: url-test
+    interval: 600
+    timeout: 5000
+    lazy: true
+    tolerance: 100
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    filter: "(?i)(台湾|🇹🇼|TW|Taiwan|台-|台_|Taipei|TPE)"
+
+  - name: US 美国
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/United_States.png
+    type: select
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    filter: "(?i)(美国|🇺🇸|US|USA|United States|America|Los Angeles|New York|San Francisco|Seattle|Chicago|美西|美东|西部|东部)"
+    proxies:
+      - US-Auto
+  - name: US-Auto
+    hidden: true
+    type: url-test
+    interval: 600
+    timeout: 5000
+    lazy: true
+    tolerance: 100
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    filter: "(?i)(美国|🇺🇸|US|USA|United States|America|Los Angeles|New York|San Francisco|Seattle|Chicago|美西|美东|西部|东部)"
+
+  - name: UK 英国
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/United_Kingdom.png
+    type: select
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    filter: "(?i)(英国|🇬🇧|UK|United Kingdom|Britain|伦敦|London|Manchester|Birmingham)"
+    proxies:
+      - UK-Auto
+  - name: UK-Auto
+    hidden: true
+    type: url-test
+    interval: 600
+    timeout: 5000
+    lazy: true
+    tolerance: 100
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    filter: "(?i)(英国|🇬🇧|UK|United Kingdom|Britain|伦敦|London|Manchester|Birmingham)"
+
+  - name: 流媒体专用
+    hidden: true
+    type: url-test
+    interval: 600
+    timeout: 5000
+    lazy: true
+    tolerance: 100
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    filter: "(?i)(IPLC|IEPL|专线|游戏|Game|Media|流媒体|Netflix|Disney|HBO|Prime|Video|NF|原生|Native|解锁|Unlock|Premium|Elite|Pro)"
+
+  - name: 其他线路
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/World_Map.png
+    type: select
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    filter: "(?i)^(?!.*(?:🇭🇰|香港|HK|Hong Kong|🇹🇼|台湾|臺灣|TW|Taiwan|🇯🇵|日本|JP|Japan|🇰🇷|韩国|KR|Korea|🇺🇸|美国|US|USA|America|🇸🇬|新加坡|SG|Singapore|🇨🇳|中国|CN|China|🇬🇧|英国|UK|Britain|London|\\.com\\b|群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
+    proxies:
+      - 其他-Auto
+  - name: 其他-Auto
+    hidden: true
+    type: url-test
+    interval: 600
+    timeout: 5000
+    lazy: true
+    tolerance: 100
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    filter: "(?i)^(?!.*(?:🇭🇰|香港|HK|Hong Kong|🇹🇼|台湾|臺灣|TW|Taiwan|🇯🇵|日本|JP|Japan|🇰🇷|韩国|KR|Korea|🇺🇸|美国|US|USA|America|🇸🇬|新加坡|SG|Singapore|🇨🇳|中国|CN|China|🇬🇧|英国|UK|Britain|London|\\.com\\b|群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
+
+  # ========== Auto-select Groups ==========
+  - name: 自动选择
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Auto.png
+    type: url-test
+    interval: 600
+    timeout: 5000
+    lazy: true
+    tolerance: 100
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    filter: "^(?!.*(?:群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|\\.com\\b|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
+
+  - name: 手动选择
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Static.png
+    type: select
+    use:
+      - ProxyProviderA
+      - ProxyProviderB
+      - ProxyProviderC
+    filter: "^(?!.*(?:群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|\\.com\\b|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
+
+# ========== Rule Providers ==========
+rule-providers:
+  lancidr:
+    type: http
+    behavior: ipcidr
+    format: yaml
+    url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/lancidr.yaml
+    path: ./rules/lancidr.yaml
+    interval: 604800
+  reject:
+    type: http
+    behavior: domain
+    format: yaml
+    url: https://anti-ad.net/clash.yaml
+    path: ./rules/reject.yaml
+    interval: 86400
+  ai-offshore:
+    type: http
+    behavior: domain
+    format: yaml
+    url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/ai-offshore.yaml
+    path: ./rules/ai-offshore.yaml
+    interval: 604800
+  apple-offshore:
+    type: http
+    behavior: domain
+    format: yaml
+    url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/apple-offshore.yaml
+    path: ./rules/apple-offshore.yaml
+    interval: 604800
+  apple-cn:
+    type: http
+    behavior: domain
+    format: yaml
+    url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/apple-cn.yaml
+    path: ./rules/apple-cn.yaml
+    interval: 604800
+  github:
+    type: http
+    behavior: domain
+    format: yaml
+    url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/github.yaml
+    path: ./rules/github.yaml
+    interval: 604800
+  web3:
+    type: http
+    behavior: domain
+    format: yaml
+    url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/web3.yaml
+    path: ./rules/web3.yaml
+    interval: 604800
+  telegram:
+    type: http
+    behavior: domain
+    format: text
+    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/telegram.list
+    path: ./rules/telegram.list
+    interval: 86400
+  spotify:
+    type: http
+    behavior: domain
+    format: text
+    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/spotify.list
+    path: ./rules/spotify.list
+    interval: 86400
+  youtube:
+    type: http
+    behavior: domain
+    format: text
+    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/youtube.list
+    path: ./rules/youtube.list
+    interval: 86400
+
+# ========== Rules ==========
+rules:
+  - RULE-SET,lancidr,DIRECT
+  - GEOSITE,cn,DIRECT
+  - GEOIP,CN,DIRECT
+  - DOMAIN-SUFFIX,ahrefs.com,默认线路
+  - DOMAIN-SUFFIX,appsflyer.com,默认线路
+  # - RULE-SET,reject,REJECT
+  - DOMAIN-SUFFIX,larksuite.com,DIRECT
+  - RULE-SET,ai-offshore,AI Service
+  - RULE-SET,apple-cn,DIRECT
+  - RULE-SET,apple-offshore,Apple
+  - RULE-SET,github,GitHub
+  - RULE-SET,web3,Web3
+  - RULE-SET,telegram,Telegram
+  - RULE-SET,spotify,Spotify
+  - RULE-SET,youtube,YouTube
+  - MATCH,默认线路
