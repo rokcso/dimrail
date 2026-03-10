@@ -546,8 +546,11 @@ rules:
 
   # ===== 特定域名规则（优先级最高）=====
   - DOMAIN-SUFFIX,ahrefs.com,默认线路
-  - DOMAIN-SUFFIX,appsflyer.com,默认线路
+  - DOMAIN-SUFFIX,hq1.appsflyer.com,DIRECT
   - DOMAIN-SUFFIX,larksuite.com,DIRECT
+  # ===== 个人域名直连 =====
+  - DOMAIN-SUFFIX,rokcso.com,DIRECT
+  - DOMAIN-SUFFIX,coryso.com,DIRECT
 
   # ===== 国内服务直连（补充规则）=====
   - RULE-SET,cn-direct,DIRECT
