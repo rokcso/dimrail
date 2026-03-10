@@ -47,6 +47,14 @@ dns:
     - "*.corp"
     - "*.internal"
 
+    # ========== GitHub (SSH connection needs real IP) ==========
+    - "+.github.com"
+    - "+.githubusercontent.com"
+    - "+.githubapp.com"
+    - "+.githubassets.com"
+    - "github.com"
+    - "*.github.com"
+
     # ========== Time/NTP Services ==========
     - "+.pool.ntp.org"
     - "+.ntp.org.cn"

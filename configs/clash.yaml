@@ -40,6 +40,10 @@ geo-update-interval: 24
 # ========== Performance Settings ==========
 tcp-concurrent: true
 unified-delay: true
+# Browser fingerprint simulation (prevent fingerprint detection)
+global-client-fingerprint: chrome
+# Skip certificate verification for proxy servers
+skip-cert-verify: true
 
 # ========== TUN Mode (Transparent Proxy) ==========
 tun:
@@ -54,10 +58,18 @@ tun:
 # ========== DNS Configuration ==========
 dns:
   enable: true
+  prefer-h3: true
   ipv6: false
   listen: 0.0.0.0:1053
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.0/16
+  use-hosts: true
+  # Respect rules for DNS queries (prevent DNS leak)
+  respect-rules: true
+  # Proxy domain resolution through proxy
+  proxy-server-nameserver:
+    - https://dns.google/dns-query
+    - https://cloudflare-dns.com/dns-query
   fake-ip-filter:
     # ========== Local Network ==========
     - "*.lan"
@@ -70,6 +82,14 @@ dns:
     - "*.home.arpa"
     - "*.corp"
     - "*.internal"
+
+    # ========== GitHub (SSH connection needs real IP) ==========
+    - "+.github.com"
+    - "+.githubusercontent.com"
+    - "+.githubapp.com"
+    - "+.githubassets.com"
+    - "github.com"
+    - "*.github.com"
 
     # ========== Time/NTP Services ==========
     - "+.pool.ntp.org"
