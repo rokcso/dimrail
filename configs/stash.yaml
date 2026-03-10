@@ -20,17 +20,50 @@ log-level: debug
 dns:
   # 是否开启 IPv6 解析
   ipv6: false
+  # 用于解析 DoH/DoT 域名的 DNS（需要能访问）
   default-nameserver:
-    - 114.114.114.114
-    - 119.29.29.29
     - 223.5.5.5
+    - 119.29.29.29
+    - 1.1.1.1
+    - 8.8.8.8
+  # 主要 DNS 服务器（国内外混合）
   nameserver:
-    - tls://223.5.5.5:853
-    - tls://223.6.6.6:853
     - https://dns.alidns.com/dns-query
     - https://doh.pub/dns-query
+    - https://cloudflare-dns.com/dns-query
+    - https://dns.google/dns-query
+  # DNS 分流：特定域名使用特定 DNS
+  nameserver-policy:
+    # ===== AI 服务使用 Cloudflare DNS =====
+    "+.openai.com": https://cloudflare-dns.com/dns-query
+    "+.chatgpt.com": https://cloudflare-dns.com/dns-query
+    "+.anthropic.com": https://cloudflare-dns.com/dns-query
+    "+.claude.ai": https://cloudflare-dns.com/dns-query
+    "+.perplexity.ai": https://cloudflare-dns.com/dns-query
+    "+.gemini.google.com": https://cloudflare-dns.com/dns-query
+    # ===== Google 服务 =====
+    "+.google.com": https://dns.google/dns-query
+    "+.googleapis.com": https://dns.google/dns-query
+    "+.gstatic.com": https://dns.google/dns-query
+    "+.ggpht.com": https://dns.google/dns-query
+    "+.youtube.com": https://dns.google/dns-query
+    "+.ytimg.com": https://dns.google/dns-query
+    "+.googlevideo.com": https://dns.google/dns-query
+    # ===== GitHub =====
+    "+.github.com": https://dns.google/dns-query
+    "+.githubusercontent.com": https://dns.google/dns-query
+    "+.githubassets.com": https://dns.google/dns-query
+    # ===== Telegram =====
+    "+.telegram.org": https://cloudflare-dns.com/dns-query
+    "+.t.me": https://cloudflare-dns.com/dns-query
+    # ===== 国内域名使用国内 DNS =====
+    "+.cn": https://dns.alidns.com/dns-query
+    "+.bilibili.com": https://dns.alidns.com/dns-query
+    "+.douyin.com": https://dns.alidns.com/dns-query
+    "+.ixigua.com": https://dns.alidns.com/dns-query
+    "+.toutiao.com": https://dns.alidns.com/dns-query
   respect-rules: true
-  enhanced-mode: fake-ip # 确保启用Fake IP
+  enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.0/16
   # 不会解析为 fake IP 的域名
   # 这些域名将返回它们的真实 IP 地址
@@ -430,6 +463,13 @@ proxy-groups:
 
 # 规则提供商
 rule-providers:
+  cn-direct:
+    type: http
+    behavior: domain
+    format: yaml
+    url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/cn-direct.yaml
+    path: ./rules/cn-direct.yaml
+    interval: 604800
   lancidr:
     type: http
     behavior: ipcidr
@@ -499,14 +539,20 @@ rule-providers:
     interval: 86400
 
 # 规则配置
+# 注意：特定域名规则放在前面，通用规则放在后面
 rules:
-  - RULE-SET,lancidr,DIRECT
-  - GEOSITE,cn,DIRECT
-  - GEOIP,CN,DIRECT
+  # ===== 广告拦截（可选开启）=====
+  # - RULE-SET,reject,REJECT
+
+  # ===== 特定域名规则（优先级最高）=====
   - DOMAIN-SUFFIX,ahrefs.com,默认线路
   - DOMAIN-SUFFIX,appsflyer.com,默认线路
-  # - RULE-SET,reject,REJECT
   - DOMAIN-SUFFIX,larksuite.com,DIRECT
+
+  # ===== 国内服务直连（补充规则）=====
+  - RULE-SET,cn-direct,DIRECT
+
+  # ===== 服务分类规则 =====
   - RULE-SET,ai-offshore,AI Service
   - RULE-SET,apple-cn,DIRECT
   - RULE-SET,apple-offshore,Apple
@@ -515,4 +561,13 @@ rules:
   - RULE-SET,telegram,Telegram
   - RULE-SET,spotify,Spotify
   - RULE-SET,youtube,YouTube
+
+  # ===== 私有网络直连 =====
+  - RULE-SET,lancidr,DIRECT
+
+  # ===== 中国网站/IP 直连（放在最后，避免误匹配）=====
+  - GEOSITE,cn,DIRECT
+  - GEOIP,CN,DIRECT
+
+  # ===== 兜底规则 =====
   - MATCH,默认线路

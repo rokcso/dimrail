@@ -1,0 +1,162 @@
+# CN Direct Rules - Supplementary direct connection rules for Chinese services
+# Purpose: Domains that should connect directly but may not be in GEOSITE,cn
+# Update: 2026-03-10
+
+payload:
+  # ===== ByteDance (字节跳动) =====
+  - "+.bytedance.com"
+  - "+.bytednsdoc.com"
+  - "+.bytecdn.cn"
+  - "+.byteimg.com"
+  - "+.byteoversea.com"
+  - "+.douyin.com"
+  - "+.douyinvod.com"
+  - "+.douyincdn.com"
+  - "+.ixigua.com"
+  - "+.ixiguavideo.com"
+  - "+.ixiguavod.com"
+  - "+.pstatp.com"
+  - "+.pstatp.com.cn"
+  - "+.snssdk.com"
+  - "+.snssdk.com.cn"
+  - "+.toutiao.com"
+  - "+.toutiaocdn.com"
+  - "+.toutiaocdn.net"
+  - "+.toutiaostatic.com"
+  - "+.xiguavideo.com"
+  - "+.xiguavod.com"
+
+  # ===== Alibaba (阿里巴巴) =====
+  - "+.alicdn.com"
+  - "+.aliyun.com"
+  - "+.aliyuncs.com"
+  - "+.tmall.com"
+  - "+.taobao.com"
+  - "+.taobaocdn.com"
+  - "+.tbcdn.cn"
+
+  # ===== Tencent (腾讯) =====
+  - "+.qq.com"
+  - "+.qqmail.com"
+  - "+.qpic.cn"
+  - "+.qlogo.cn"
+  - "+.myqcloud.com"
+  - "+.tencent.com"
+  - "+.tencentcloud.com"
+  - "+.wechat.com"
+  - "+.weixin.com"
+  - "+.weixin.qq.com"
+
+  # ===== Baidu (百度) =====
+  - "+.baidu.com"
+  - "+.baidubcr.com"
+  - "+.baidustatic.com"
+  - "+.bdimg.com"
+  - "+.bdstatic.com"
+  - "+.hao123.com"
+
+  # ===== JD (京东) =====
+  - "+.jd.com"
+  - "+.jd.hk"
+  - "+.jdcdn.com"
+  - "+.jdpay.com"
+
+  # ===== Meituan (美团) =====
+  - "+.meituan.com"
+  - "+.meituan.net"
+  - "+.dianping.com"
+
+  # ===== Kuaishou (快手) =====
+  - "+.kuaishou.com"
+  - "+.ksapisrv.com"
+  - "+.ksyuncdn.com"
+  - "+.ksyungs.com"
+  - "+.yximgs.com"
+
+  # ===== Bilibili (哔哩哔哩) =====
+  - "+.bilibili.com"
+  - "+.biligame.com"
+  - "+.biliapi.com"
+  - "+.biliapi.net"
+  - "+.bilivideo.com"
+  - "+.bilivideo.cn"
+  - "+.biligame.cn"
+  - "+.hdslb.com"
+
+  # ===== NetEase (网易) =====
+  - "+.163.com"
+  - "+.163cdn.com"
+  - "+.126.net"
+  - "+.127.net"
+  - "+.netease.com"
+  - "+.music.163.com"
+
+  # ===== Sohu (搜狐) =====
+  - "+.sohu.com"
+  - "+.sohucs.com"
+  - "+.sogou.com"
+  - "+.sogo.com"
+
+  # ===== Sina (新浪) =====
+  - "+.sina.com"
+  - "+.sina.com.cn"
+  - "+.sinaapp.com"
+  - "+.sinaimg.cn"
+  - "+.weibo.com"
+  - "+.weibo.cn"
+  - "+.weibocdn.com"
+
+  # ===== Zhihu (知乎) =====
+  - "+.zhihu.com"
+  - "+.zhimg.com"
+
+  # ===== XiaoHongShu (小红书) =====
+  - "+.xiaohongshu.com"
+  - "+.xhscdn.com"
+
+  # ===== Didi (滴滴) =====
+  - "+.didichuxing.com"
+  - "+.diditaxi.com"
+  - "+.xiaojukeji.com"
+
+  # ===== Fliggy (飞猪) =====
+  - "+.fliggy.com"
+  - "+.fliggycdn.com"
+
+  # ===== Ctrip (携程) =====
+  - "+.ctrip.com"
+  - "+.ctripcdn.com"
+  - "+.ly.com"
+
+  # ===== 12306 (铁路购票) =====
+  - "+.12306.cn"
+  - "+.95306.cn"
+
+  # ===== Bank & Finance (银行金融) =====
+  - "+.icbc.com.cn"
+  - "+.ccb.com"
+  - "+.boc.cn"
+  - "+.abchina.com"
+  - "+.bankcomm.com"
+  - "+.psbc.com"
+  - "+.cmbchina.com"
+  - "+.cib.com.cn"
+  - "+.spdb.com.cn"
+  - "+.cebbank.com"
+  - "+.cgbchina.com.cn"
+  - "+.pingan.com"
+  - "+.alipay.com"
+  - "+.alipayobjects.com"
+
+  # ===== Government (政府机构) =====
+  - "+.gov.cn"
+
+  # ===== Education (教育) =====
+  - "+.edu.cn"
+
+  # ===== CDN & Cloud Services =====
+  - "+.wangsu.com"
+  - "+.wscdns.com"
+  - "+.chinacache.com"
+  - "+.chinanetcenter.com"
+  - "+.ourdvsss.com"
