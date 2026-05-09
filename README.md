@@ -35,7 +35,7 @@ proxy-providers:
     url: https://your-subscription-url-here  # 替换这里
 ```
 
-然后在 Stash 或 Clash 中导入对应配置文件即可。
+默认模板只启用一个订阅源；如果你需要多个订阅源，建议走下面的 Workers 生成流程，它会自动把多个 provider 注入到 Stash/Clash 配置中。
 
 ## Cloudflare Workers 部署
 
@@ -52,11 +52,13 @@ cp config.private.example.yaml config.private.yaml
 
 ```yaml
 proxy-providers:
-  ProxyProviderA:
+  MainProvider:
     url: https://your-real-subscription-url
-  ProxyProviderB:
+  BackupProvider:
     url: https://your-another-subscription-url
 ```
+
+`proxy-providers` 至少保留一个即可，名称也不必固定成 `ProxyProviderA/B/C`；`generate.py` 会按你提供的 provider 列表自动生成对应的 Stash/Clash 配置。
 
 ### 2. 生成 Workers 脚本
 
@@ -97,7 +99,7 @@ python3 generate.py
 | `dns.respect-rules` | ✅ 支持 | ❌ 不支持 |
 | `mixed-port` | ❌ 不需要 | ✅ 需要 |
 | `tun` 模式 | ❌ 使用 Enhanced Mode | ✅ 原生支持 |
-| `external-controller` | ❌ 不需要 | ✅ 需要 |
+| `external-controller` | ❌ 不需要 | ✅ 默认仅监听 `127.0.0.1` |
 
 ## 项目结构
 

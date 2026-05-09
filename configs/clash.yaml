@@ -14,8 +14,8 @@
 # Mixed port for HTTP and SOCKS5
 mixed-port: 7890
 # Allow LAN connections
-allow-lan: true
-bind-address: "*"
+allow-lan: false
+bind-address: 127.0.0.1
 # Run mode: rule/global/direct
 mode: rule
 # Log level: silent/info/warning/error/debug
@@ -25,10 +25,10 @@ ipv6: false
 
 # ========== External Controller ==========
 # RESTful API for Web UI
-external-controller: 0.0.0.0:9090
+external-controller: 127.0.0.1:9090
 # Web UI directory (optional)
 # external-ui: ./ui
-# API secret (set your own password)
+# API secret (set your own password before exposing the controller to LAN)
 secret: ""
 
 # ========== GeoData Settings ==========
@@ -76,7 +76,7 @@ dns:
   enable: true
   prefer-h3: true
   ipv6: false
-  listen: 0.0.0.0:1053
+  listen: 127.0.0.1:1053
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.0/16
   use-hosts: true
@@ -266,24 +266,6 @@ proxy-providers:
       enable: true
       interval: 300
       url: http://www.gstatic.com/generate_204
-  ProxyProviderB:
-    type: http
-    url: https://rokcso.com/
-    interval: 10800
-    path: ./providers/ProxyProviderB.yaml
-    health-check:
-      enable: true
-      interval: 300
-      url: http://www.gstatic.com/generate_204
-  ProxyProviderC:
-    type: http
-    url: https://rokcso.com/
-    interval: 10800
-    path: ./providers/ProxyProviderC.yaml
-    health-check:
-      enable: true
-      interval: 300
-      url: http://www.gstatic.com/generate_204
 
 # ========== Proxy Groups ==========
 proxy-groups:
@@ -292,8 +274,6 @@ proxy-groups:
     type: select
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     proxies:
       - 自动选择
       - HK 香港
@@ -310,8 +290,6 @@ proxy-groups:
     type: select
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     proxies:
       - US 美国
       - UK 英国
@@ -327,8 +305,6 @@ proxy-groups:
     type: select
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     proxies:
       - HK 香港
       - US 美国
@@ -344,8 +320,6 @@ proxy-groups:
     type: select
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     proxies:
       - SG 新加坡
       - HK 香港
@@ -361,8 +335,6 @@ proxy-groups:
     type: select
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     proxies:
       - 流媒体专用
       - HK 香港
@@ -379,8 +351,6 @@ proxy-groups:
     type: select
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     proxies:
       - 流媒体专用
       - HK 香港
@@ -397,8 +367,6 @@ proxy-groups:
     type: select
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     proxies:
       - HK 香港
       - SG 新加坡
@@ -415,8 +383,6 @@ proxy-groups:
     type: select
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     proxies:
       - US 美国
       - SG 新加坡
@@ -434,8 +400,6 @@ proxy-groups:
     type: select
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     filter: "(?i)(澳门|🇲🇴|Macau|Macao|香港|🇭🇰|Hong Kong|HK|HKG)"
     proxies:
       - HK-Auto
@@ -448,8 +412,6 @@ proxy-groups:
     tolerance: 100
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     filter: "(?i)(澳门|🇲🇴|Macau|Macao|香港|🇭🇰|Hong Kong|HK|HKG)"
 
   - name: SG 新加坡
@@ -457,8 +419,6 @@ proxy-groups:
     type: select
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     filter: "新加坡|坡|狮城|🇸🇬|SG|(?i)Singapore"
     proxies:
       - SG-Auto
@@ -471,8 +431,6 @@ proxy-groups:
     tolerance: 100
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     filter: "新加坡|坡|狮城|🇸🇬|SG|(?i)Singapore"
 
   - name: JP 日本
@@ -480,8 +438,6 @@ proxy-groups:
     type: select
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     filter: "(?i)(日本|🇯🇵|东京|大阪|JP|Japan|Tokyo|Osaka)"
     proxies:
       - JP-Auto
@@ -494,8 +450,6 @@ proxy-groups:
     tolerance: 100
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     filter: "(?i)(日本|🇯🇵|东京|大阪|JP|Japan|Tokyo|Osaka)"
 
   - name: TW 台湾
@@ -503,8 +457,6 @@ proxy-groups:
     type: select
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     filter: "(?i)(台湾|🇹🇼|TW|Taiwan|台-|台_|Taipei|TPE)"
     proxies:
       - TW-Auto
@@ -517,8 +469,6 @@ proxy-groups:
     tolerance: 100
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     filter: "(?i)(台湾|🇹🇼|TW|Taiwan|台-|台_|Taipei|TPE)"
 
   - name: US 美国
@@ -526,8 +476,6 @@ proxy-groups:
     type: select
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     filter: "(?i)(美国|🇺🇸|US|USA|United States|America|Los Angeles|New York|San Francisco|Seattle|Chicago|美西|美东|西部|东部)"
     proxies:
       - US-Auto
@@ -540,8 +488,6 @@ proxy-groups:
     tolerance: 100
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     filter: "(?i)(美国|🇺🇸|US|USA|United States|America|Los Angeles|New York|San Francisco|Seattle|Chicago|美西|美东|西部|东部)"
 
   - name: UK 英国
@@ -549,8 +495,6 @@ proxy-groups:
     type: select
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     filter: "(?i)(英国|🇬🇧|UK|United Kingdom|Britain|伦敦|London|Manchester|Birmingham)"
     proxies:
       - UK-Auto
@@ -563,8 +507,6 @@ proxy-groups:
     tolerance: 100
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     filter: "(?i)(英国|🇬🇧|UK|United Kingdom|Britain|伦敦|London|Manchester|Birmingham)"
 
   - name: 流媒体专用
@@ -576,8 +518,6 @@ proxy-groups:
     tolerance: 100
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     filter: "(?i)(IPLC|IEPL|专线|游戏|Game|Media|流媒体|Netflix|Disney|HBO|Prime|Video|NF|原生|Native|解锁|Unlock|Premium|Elite|Pro)"
 
   - name: 其他线路
@@ -585,9 +525,7 @@ proxy-groups:
     type: select
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
-    filter: "(?i)^(?!.*(?:🇭🇰|香港|HK|Hong Kong|🇹🇼|台湾|臺灣|TW|Taiwan|🇯🇵|日本|JP|Japan|🇰🇷|韩国|KR|Korea|🇺🇸|美国|US|USA|America|🇸🇬|新加坡|SG|Singapore|🇨🇳|中国|CN|China|🇬🇧|英国|UK|Britain|London|\\.com\\b|群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
+    filter: "(?i)^(?!.*(?:🇭🇰|香港|HK|HKG|Hong Kong|🇲🇴|澳门|Macau|Macao|🇹🇼|台湾|臺灣|TW|Taiwan|Taipei|TPE|🇯🇵|日本|JP|Japan|Tokyo|Osaka|🇰🇷|韩国|KR|Korea|🇺🇸|美国|US|USA|United States|America|Los Angeles|New York|San Francisco|Seattle|Chicago|美西|美东|西部|东部|🇸🇬|新加坡|SG|Singapore|狮城|坡|🇨🇳|中国|CN|China|🇬🇧|英国|UK|United Kingdom|Britain|London|Manchester|Birmingham|\\.com\\b|群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
     proxies:
       - 其他-Auto
   - name: 其他-Auto
@@ -599,9 +537,7 @@ proxy-groups:
     tolerance: 100
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
-    filter: "(?i)^(?!.*(?:🇭🇰|香港|HK|Hong Kong|🇹🇼|台湾|臺灣|TW|Taiwan|🇯🇵|日本|JP|Japan|🇰🇷|韩国|KR|Korea|🇺🇸|美国|US|USA|America|🇸🇬|新加坡|SG|Singapore|🇨🇳|中国|CN|China|🇬🇧|英国|UK|Britain|London|\\.com\\b|群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
+    filter: "(?i)^(?!.*(?:🇭🇰|香港|HK|HKG|Hong Kong|🇲🇴|澳门|Macau|Macao|🇹🇼|台湾|臺灣|TW|Taiwan|Taipei|TPE|🇯🇵|日本|JP|Japan|Tokyo|Osaka|🇰🇷|韩国|KR|Korea|🇺🇸|美国|US|USA|United States|America|Los Angeles|New York|San Francisco|Seattle|Chicago|美西|美东|西部|东部|🇸🇬|新加坡|SG|Singapore|狮城|坡|🇨🇳|中国|CN|China|🇬🇧|英国|UK|United Kingdom|Britain|London|Manchester|Birmingham|\\.com\\b|群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
 
   # ========== Auto-select Groups ==========
   - name: 自动选择
@@ -613,8 +549,6 @@ proxy-groups:
     tolerance: 100
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     filter: "^(?!.*(?:群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|\\.com\\b|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
 
   - name: 手动选择
@@ -622,8 +556,6 @@ proxy-groups:
     type: select
     use:
       - ProxyProviderA
-      - ProxyProviderB
-      - ProxyProviderC
     filter: "^(?!.*(?:群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|\\.com\\b|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
 
 # ========== Rule Providers ==========

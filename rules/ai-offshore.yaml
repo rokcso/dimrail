@@ -51,7 +51,7 @@ payload:
 
   # ===== AI Code Assistants =====
   - +.cursor.com # AI code editor
-  - api.github.com # GitHub Copilot API
+  # api.github.com is shared with the general GitHub API, so it should stay on the GitHub route.
   - copilot-proxy.githubusercontent.com # GitHub Copilot proxy
   - default.exp-tas.com # GitHub Copilot experiments
   - api.jetbrains.ai # JetBrains AI

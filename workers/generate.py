@@ -7,6 +7,7 @@ Dimrail 配置生成脚本
 """
 
 import yaml
+import copy
 import os
 import sys
 import secrets
@@ -33,21 +34,104 @@ def extract_token_from_workers(workers_file):
     return None
 
 
-def load_config(template_file, private_file):
-    """Load and merge configuration files"""
-    with open(template_file, "r", encoding="utf-8") as f:
-        template_config = yaml.safe_load(f) or {}
+def load_yaml_file(path):
+    """Load YAML file and always return a mapping"""
+    with open(path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
 
-    with open(private_file, "r", encoding="utf-8") as f:
-        private_config = yaml.safe_load(f) or {}
 
-    # Merge proxy-providers from private config
-    if "proxy-providers" in private_config:
-        for provider_name, provider_config in private_config["proxy-providers"].items():
-            if provider_name not in template_config.get("proxy-providers", {}):
-                template_config.setdefault("proxy-providers", {})[provider_name] = provider_config
-            elif "url" in provider_config:
-                template_config["proxy-providers"][provider_name]["url"] = provider_config["url"]
+def merge_mappings(base, overrides):
+    """Recursively merge mapping values without discarding nested defaults"""
+    merged = copy.deepcopy(base)
+    for key, value in overrides.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = merge_mappings(merged[key], value)
+        else:
+            merged[key] = copy.deepcopy(value)
+    return merged
+
+
+def load_private_providers(private_file):
+    """Load private providers and validate they contain usable subscription URLs"""
+    private_config = load_yaml_file(private_file)
+    providers = private_config.get("proxy-providers", {})
+
+    if not providers:
+        raise ValueError("workers/config.private.yaml 中至少需要配置一个 proxy-provider")
+
+    validated = {}
+    for provider_name, provider_config in providers.items():
+        if not isinstance(provider_config, dict):
+            raise ValueError(f"proxy-providers.{provider_name} 必须是一个映射")
+
+        url = str(provider_config.get("url", "")).strip()
+        if not url:
+            raise ValueError(f"proxy-providers.{provider_name}.url 不能为空")
+        if "example.com/sub" in url:
+            raise ValueError(
+                f"proxy-providers.{provider_name}.url 仍然是示例占位地址，请替换为真实订阅链接"
+            )
+
+        validated[provider_name] = copy.deepcopy(provider_config)
+
+    return validated
+
+
+def build_provider_path(provider_name, index):
+    """Build a stable path for custom Clash proxy providers"""
+    slug = re.sub(r"[^0-9A-Za-z._-]+", "_", provider_name).strip("._-").lower()
+    if not slug:
+        slug = f"provider_{index}"
+    return f"./providers/{index:02d}_{slug}.yaml"
+
+
+def build_proxy_providers(template_providers, private_providers, client_type):
+    """Build proxy providers using template defaults plus private overrides"""
+    provider_defaults = copy.deepcopy(next(iter(template_providers.values()), {}))
+    built_providers = {}
+
+    for index, (provider_name, provider_config) in enumerate(private_providers.items(), start=1):
+        provider_template = template_providers.get(provider_name, provider_defaults)
+        provider = merge_mappings(provider_template, provider_config)
+
+        if client_type == "clash":
+            provider.setdefault("type", "http")
+            provider.setdefault("interval", 10800)
+            provider.setdefault(
+                "health-check",
+                {
+                    "enable": True,
+                    "interval": 300,
+                    "url": "http://www.gstatic.com/generate_204",
+                },
+            )
+            if provider_name not in template_providers and "path" not in provider_config:
+                provider["path"] = build_provider_path(provider_name, index)
+            else:
+                provider.setdefault("path", build_provider_path(provider_name, index))
+        else:
+            provider.setdefault("interval", 10800)
+            provider.setdefault("benchmark-url", "http://www.gstatic.com/generate_204")
+            provider.setdefault("benchmark-timeout", 10)
+
+        built_providers[provider_name] = provider
+
+    return built_providers
+
+
+def load_config(template_file, private_providers, client_type):
+    """Load template config and inject the configured proxy providers"""
+    template_config = load_yaml_file(template_file)
+    template_providers = template_config.get("proxy-providers", {})
+
+    template_config["proxy-providers"] = build_proxy_providers(
+        template_providers, private_providers, client_type
+    )
+
+    provider_names = list(private_providers.keys())
+    for group in template_config.get("proxy-groups", []):
+        if "use" in group:
+            group["use"] = provider_names
 
     return template_config
 
@@ -104,18 +188,23 @@ def main():
         sys.exit(1)
 
     try:
-        # Step 1: Load Stash config
-        print("📖 [1/7] 读取 Stash 配置...")
-        stash_config = load_config(stash_template, private_file)
+        # Step 1: Load private providers
+        print("🔐 [1/8] 读取私有订阅配置...")
+        private_providers = load_private_providers(private_file)
+        print(f"   ✓ 已加载 {len(private_providers)} 个订阅源")
+
+        # Step 2: Load Stash config
+        print("📖 [2/8] 读取 Stash 配置...")
+        stash_config = load_config(stash_template, private_providers, "stash")
         print("   ✓ Stash 配置加载成功")
 
-        # Step 2: Load Clash config
-        print("📖 [2/7] 读取 Clash 配置...")
-        clash_config = load_config(clash_template, private_file)
+        # Step 3: Load Clash config
+        print("📖 [3/8] 读取 Clash 配置...")
+        clash_config = load_config(clash_template, private_providers, "clash")
         print("   ✓ Clash 配置加载成功")
 
-        # Step 3: Convert to YAML strings
-        print("📝 [3/7] 生成配置字符串...")
+        # Step 4: Convert to YAML strings
+        print("📝 [4/8] 生成配置字符串...")
         stash_yaml = config_to_yaml(stash_config)
         clash_yaml = config_to_yaml(clash_config)
         stash_size = len(stash_yaml.encode("utf-8"))
@@ -123,14 +212,14 @@ def main():
         print(f"   ✓ Stash 配置: {stash_size:,} 字节")
         print(f"   ✓ Clash 配置: {clash_size:,} 字节")
 
-        # Step 4: Load workers template
-        print("📖 [4/7] 读取 Workers 模板...")
+        # Step 5: Load workers template
+        print("📖 [5/8] 读取 Workers 模板...")
         with open(workers_template_file, "r", encoding="utf-8") as f:
             workers_template = f.read()
         print("   ✓ Workers 模板加载成功")
 
-        # Step 5: Handle SECRET_TOKEN
-        print("🔐 [5/7] 处理访问密钥...")
+        # Step 6: Handle SECRET_TOKEN
+        print("🔐 [6/8] 处理访问密钥...")
         existing_token = extract_token_from_workers(output_file)
 
         if existing_token:
@@ -140,8 +229,8 @@ def main():
             secret_token = generate_secret_token(32)
             print(f"   ✓ 生成新密钥: {secret_token}")
 
-        # Step 6: Generate workers script
-        print("🔄 [6/7] 生成 Workers 脚本...")
+        # Step 7: Generate workers script
+        print("🔄 [7/8] 生成 Workers 脚本...")
         workers_code = workers_template.replace("{{STASH_CONFIG}}", stash_yaml)
         workers_code = workers_code.replace("{{CLASH_CONFIG}}", clash_yaml)
         workers_code = workers_code.replace(
@@ -149,15 +238,15 @@ def main():
             f'const SECRET_TOKEN = "{secret_token}";',
         )
 
-        # Step 7: Write output
-        print("💾 [7/7] 写入输出文件...")
+        # Step 8: Write output
+        print("💾 [8/8] 写入输出文件...")
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(workers_code)
 
         workers_size = len(workers_code.encode("utf-8"))
         print(f"   ✓ Workers 脚本大小: {workers_size:,} 字节")
 
-        # Step 10: Success output
+        # Success output
         print()
         print("=" * 60)
         print("✅ Workers 脚本生成成功！")
@@ -183,6 +272,9 @@ def main():
 
     except yaml.YAMLError as e:
         print(f"❌ YAML 解析错误: {e}")
+        sys.exit(1)
+    except ValueError as e:
+        print(f"❌ 配置错误: {e}")
         sys.exit(1)
     except Exception as e:
         print(f"❌ 错误: {e}")
