@@ -55,6 +55,22 @@ tun:
     - any:53
     - tcp://any:53
 
+# ========== Sniffer (Domain Sniffing) ==========
+sniffer:
+  enable: true
+  force-dns-mapping: true
+  parse-pure-ip: true
+  sniff:
+    HTTP:
+      ports: [80, 8080-8880]
+      override-destination: true
+    TLS:
+      ports: [443, 8443]
+    QUIC:
+      ports: [443, 8443]
+  skip-domain:
+    - "Mijia Cloud"
+
 # ========== DNS Configuration ==========
 dns:
   enable: true
@@ -90,6 +106,9 @@ dns:
     - "+.githubassets.com"
     - "github.com"
     - "*.github.com"
+
+    # ========== AppsFlyer (QUIC connection needs real IP) ==========
+    - "+.appsflyer.com"
 
     # ========== Time/NTP Services ==========
     - "+.pool.ntp.org"
@@ -693,9 +712,12 @@ rules:
   # ===== 广告拦截（可选开启）=====
   # - RULE-SET,reject,REJECT
 
+  # ===== 禁用 QUIC/HTTP3 (UDP:443) =====
+  - DST-PORT,443,REJECT,udp
+
   # ===== 特定域名规则（优先级最高）=====
   - DOMAIN-SUFFIX,ahrefs.com,默认线路
-  - DOMAIN-SUFFIX,hq1.appsflyer.com,DIRECT
+  - DOMAIN-SUFFIX,hq1.appsflyer.com,默认线路
   - DOMAIN-SUFFIX,larksuite.com,DIRECT
   # ===== 个人域名直连 =====
   - DOMAIN-SUFFIX,rokcso.com,DIRECT

@@ -88,6 +88,9 @@ dns:
     - "github.com"
     - "*.github.com"
 
+    # ========== AppsFlyer (QUIC connection needs real IP) ==========
+    - "+.appsflyer.com"
+
     # ========== Time/NTP Services ==========
     - "+.pool.ntp.org"
     - "+.ntp.org.cn"
@@ -184,6 +187,14 @@ dns:
 http:
   url-rewrite:
     - ^https?://(www\.)?(g|google)\.cn https://www.google.com 302
+  # Force HTTP engine for AppsFlyer to avoid QUIC issues
+  force-http-engine:
+    - "+.appsflyer.com:443"
+
+# Script shortcuts to disable QUIC/HTTP3 (UDP:443)
+script:
+  shortcuts:
+    quic: network == 'udp' and dst_port == 443
 
 # 代理服务提供商
 proxy-providers:
@@ -544,9 +555,12 @@ rules:
   # ===== 广告拦截（可选开启）=====
   # - RULE-SET,reject,REJECT
 
+  # ===== 禁用 QUIC/HTTP3 (UDP:443) =====
+  - SCRIPT,quic,REJECT
+
   # ===== 特定域名规则（优先级最高）=====
   - DOMAIN-SUFFIX,ahrefs.com,默认线路
-  - DOMAIN-SUFFIX,hq1.appsflyer.com,DIRECT
+  - DOMAIN-SUFFIX,hq1.appsflyer.com,默认线路
   - DOMAIN-SUFFIX,larksuite.com,DIRECT
   # ===== 个人域名直连 =====
   - DOMAIN-SUFFIX,rokcso.com,DIRECT
