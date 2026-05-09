@@ -14,7 +14,7 @@
 mode: rule
 # 日志级别：silent/info/warning/error/debug
 # 日志级别越高日志输出量越大，越倾向于调试，若需要请自行开启
-log-level: debug
+log-level: info
 
 # DNS 配置
 dns:
@@ -478,13 +478,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/lancidr.yaml
     path: ./rules/lancidr.yaml
     interval: 604800
-  reject:
-    type: http
-    behavior: domain
-    format: yaml
-    url: https://anti-ad.net/clash.yaml
-    path: ./rules/reject.yaml
-    interval: 86400
   ai-offshore:
     type: http
     behavior: domain
@@ -542,9 +535,6 @@ rule-providers:
 # 规则配置
 # 注意：特定域名规则放在前面，通用规则放在后面
 rules:
-  # ===== 广告拦截（可选开启）=====
-  # - RULE-SET,reject,REJECT
-
   # ===== 禁用 QUIC/HTTP3 (UDP:443) =====
   - SCRIPT,quic,REJECT
 

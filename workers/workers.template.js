@@ -6,11 +6,22 @@ export default {
   async fetch(request) {
     const url = new URL(request.url);
 
-    // Access token verification
+    // Access token verification (timing-safe comparison)
     const SECRET_TOKEN = "YOUR_SECRET_TOKEN_HERE";
-    const token = url.searchParams.get("token");
+    const token = url.searchParams.get("token") || "";
 
-    if (token !== SECRET_TOKEN) {
+    // Timing-safe comparison to prevent timing attacks
+    const tokenBytes = new TextEncoder().encode(token);
+    const secretBytes = new TextEncoder().encode(SECRET_TOKEN);
+    let authorized = tokenBytes.byteLength === secretBytes.byteLength;
+    if (authorized) {
+      const a = new Uint8Array(tokenBytes);
+      const b = new Uint8Array(secretBytes);
+      for (let i = 0; i < a.length; i++) { a[i] ^= b[i]; }
+      authorized = a.every(v => v === 0);
+    }
+
+    if (!authorized) {
       const infoPage = `
 ██████╗  ██╗ ███╗   ███╗ ██████╗   █████╗  ██╗ ██╗
 ██╔══██╗ ██║ ████╗ ████║ ██╔══██╗ ██╔══██╗ ██║ ██║
@@ -86,8 +97,7 @@ Supported paths:
       status: 200,
       headers: {
         "Content-Type": contentType,
-        "Access-Control-Allow-Origin": "*",
-        "Cache-Control": "public, max-age=300",
+        "Cache-Control": "private, no-store",
         "X-Config-Type": configType,
       },
     });

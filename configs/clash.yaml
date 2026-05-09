@@ -29,7 +29,8 @@ external-controller: 127.0.0.1:9090
 # Web UI directory (optional)
 # external-ui: ./ui
 # API secret (set your own password before exposing the controller to LAN)
-secret: ""
+# secret: 请设置你自己的密码，不要留空
+secret: "dimrail-changeme"
 
 # ========== GeoData Settings ==========
 geodata-mode: true
@@ -43,7 +44,7 @@ unified-delay: true
 # Browser fingerprint simulation (prevent fingerprint detection)
 global-client-fingerprint: chrome
 # Skip certificate verification for proxy servers
-skip-cert-verify: true
+skip-cert-verify: false
 
 # ========== TUN Mode (Transparent Proxy) ==========
 tun:
@@ -574,13 +575,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/lancidr.yaml
     path: ./rules/lancidr.yaml
     interval: 604800
-  reject:
-    type: http
-    behavior: domain
-    format: yaml
-    url: https://anti-ad.net/clash.yaml
-    path: ./rules/reject.yaml
-    interval: 86400
   ai-offshore:
     type: http
     behavior: domain
@@ -641,9 +635,6 @@ rule-providers:
 # ========== Rules ==========
 # 注意：特定域名规则放在前面，通用规则放在后面
 rules:
-  # ===== 广告拦截（可选开启）=====
-  # - RULE-SET,reject,REJECT
-
   # ===== 禁用 QUIC/HTTP3 (UDP:443) =====
   - DST-PORT,443,REJECT,udp
 
