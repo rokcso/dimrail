@@ -61,6 +61,7 @@ proxy-providers:
 ### 2. 生成 Workers 脚本
 
 ```bash
+python3 -m pip install -r requirements.txt
 python3 generate.py
 ```
 
@@ -113,6 +114,7 @@ dimrail/
 │   └── lancidr.yaml       # 国内 IP 段
 └── workers/
     ├── generate.py              # 配置生成脚本
+    ├── requirements.txt         # generate.py 依赖
     ├── workers.template.js      # Workers 模板
     ├── config.private.yaml      # 私有配置（不提交）
     └── workers.js               # 生成的 Workers（不提交）
