@@ -39,7 +39,7 @@
               └──────────────┘  └──────────────┘
 ```
 
-主配置由构建脚本读取 `configs/clash.yaml` 生成；`proxy-providers` 段在 Worker 请求时从 Secret 注入，其中每个 provider 的 `url` 都指向 Worker 自己的 `/providers/<name>` 中转地址——**配置中不出现任何真实机场链接**。
+主配置由构建脚本读取 `configs/clash.yaml` 生成；`proxy-providers` 段在 Worker 请求时从 Secret 注入，其中每个 provider 的 `url` 都指向 Worker 自己的 `/providers/<name>` 中转地址——**配置中不出现任何真实机场链接**。中转时会先把机场订阅**裁剪为纯 `proxies` 节点列表**再返回，机场自带的 rules / proxy-groups / dns 等一律丢弃。
 
 ## 快速开始
 

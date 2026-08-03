@@ -12,6 +12,7 @@
  *   PROVIDERS_JSON  机场订阅映射，如 {"airport-a":"https://sub.example/link/xxx"}
  *   ACCESS_TOKEN    访问密钥，所有请求都需要携带 ?token=
  */
+import { parse, stringify } from 'yaml';
 import { CONFIG_TEMPLATE } from './config.generated.js';
 
 export default {
@@ -158,14 +159,45 @@ async function relayProvider(name, env) {
   }
 
   const body = await upstream.text();
-  const contentType = upstream.headers.get('content-type') || 'text/yaml; charset=utf-8';
-  return new Response(body, {
+  const stripped = stripToProxiesOnly(body);
+  const payload = stripped ?? body;
+  const contentType = stripped
+    ? 'text/yaml; charset=utf-8'
+    : upstream.headers.get('content-type') || 'text/yaml; charset=utf-8';
+  return new Response(payload, {
     status: 200,
     headers: {
       'Content-Type': contentType,
       'Cache-Control': 'private, no-store',
     },
   });
+}
+
+/**
+ * 把机场订阅裁剪为纯节点列表（只保留 proxies）。
+ * 机场文件里自带的 rules / proxy-groups / dns / tun 等一律丢弃，
+ * 避免它们被下载却永不被 Mihomo 使用。
+ * 解析失败或没有节点时返回 null，调用方回退为原样转发。
+ */
+function stripToProxiesOnly(raw) {
+  let doc;
+  try {
+    doc = parse(raw);
+  } catch {
+    return null;
+  }
+  try {
+    if (Array.isArray(doc)) {
+      // 订阅是纯列表（如 URI 列表），原样序列化返回
+      return doc.length > 0 ? stringify(doc, { lineWidth: 0 }) : null;
+    }
+    if (doc && typeof doc === 'object' && Array.isArray(doc.proxies) && doc.proxies.length > 0) {
+      return stringify({ proxies: doc.proxies }, { lineWidth: 0 });
+    }
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 // ---------- 工具 ----------
