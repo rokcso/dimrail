@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Dimrail 配置生成脚本
-功能: 合并模板配置和私有订阅，生成统一的 Cloudflare Workers 脚本
-支持: 同时支持 Stash 和 Clash 配置，通过路径区分
+Dimrail Clash 配置生成脚本
+功能: 合并 Clash 模板配置和私有订阅，生成 Cloudflare Workers 脚本
 """
 
 import yaml
@@ -85,8 +84,8 @@ def build_provider_path(provider_name, index):
     return f"./providers/{index:02d}_{slug}.yaml"
 
 
-def build_proxy_providers(template_providers, private_providers, client_type):
-    """Build proxy providers using template defaults plus private overrides"""
+def build_proxy_providers(template_providers, private_providers):
+    """Build Clash proxy providers using template defaults plus private overrides"""
     provider_defaults = copy.deepcopy(next(iter(template_providers.values()), {}))
     built_providers = {}
 
@@ -94,38 +93,33 @@ def build_proxy_providers(template_providers, private_providers, client_type):
         provider_template = template_providers.get(provider_name, provider_defaults)
         provider = merge_mappings(provider_template, provider_config)
 
-        if client_type == "clash":
-            provider.setdefault("type", "http")
-            provider.setdefault("interval", 10800)
-            provider.setdefault(
-                "health-check",
-                {
-                    "enable": True,
-                    "interval": 300,
-                    "url": "http://www.gstatic.com/generate_204",
-                },
-            )
-            if provider_name not in template_providers and "path" not in provider_config:
-                provider["path"] = build_provider_path(provider_name, index)
-            else:
-                provider.setdefault("path", build_provider_path(provider_name, index))
+        provider.setdefault("type", "http")
+        provider.setdefault("interval", 10800)
+        provider.setdefault(
+            "health-check",
+            {
+                "enable": True,
+                "interval": 300,
+                "url": "http://www.gstatic.com/generate_204",
+            },
+        )
+        if provider_name not in template_providers and "path" not in provider_config:
+            provider["path"] = build_provider_path(provider_name, index)
         else:
-            provider.setdefault("interval", 10800)
-            provider.setdefault("benchmark-url", "http://www.gstatic.com/generate_204")
-            provider.setdefault("benchmark-timeout", 10)
+            provider.setdefault("path", build_provider_path(provider_name, index))
 
         built_providers[provider_name] = provider
 
     return built_providers
 
 
-def load_config(template_file, private_providers, client_type):
-    """Load template config and inject the configured proxy providers"""
+def load_config(template_file, private_providers):
+    """Load the Clash template and inject the configured proxy providers"""
     template_config = load_yaml_file(template_file)
     template_providers = template_config.get("proxy-providers", {})
 
     template_config["proxy-providers"] = build_proxy_providers(
-        template_providers, private_providers, client_type
+        template_providers, private_providers
     )
 
     provider_names = list(private_providers.keys())
@@ -158,7 +152,6 @@ def main():
     configs_dir = os.path.join(os.path.dirname(script_dir), "configs")
 
     # File paths
-    stash_template = os.path.join(configs_dir, "stash.yaml")
     clash_template = os.path.join(configs_dir, "clash.yaml")
     private_file = os.path.join(script_dir, "config.private.yaml")
     workers_template_file = os.path.join(script_dir, "workers.template.js")
@@ -166,8 +159,6 @@ def main():
 
     # Check required files
     missing_files = []
-    if not os.path.exists(stash_template):
-        missing_files.append("configs/stash.yaml")
     if not os.path.exists(clash_template):
         missing_files.append("configs/clash.yaml")
     if not os.path.exists(private_file):
@@ -193,33 +184,25 @@ def main():
         private_providers = load_private_providers(private_file)
         print(f"   ✓ 已加载 {len(private_providers)} 个订阅源")
 
-        # Step 2: Load Stash config
-        print("📖 [2/8] 读取 Stash 配置...")
-        stash_config = load_config(stash_template, private_providers, "stash")
-        print("   ✓ Stash 配置加载成功")
-
-        # Step 3: Load Clash config
-        print("📖 [3/8] 读取 Clash 配置...")
-        clash_config = load_config(clash_template, private_providers, "clash")
+        # Step 2: Load Clash config
+        print("📖 [2/7] 读取 Clash 配置...")
+        clash_config = load_config(clash_template, private_providers)
         print("   ✓ Clash 配置加载成功")
 
-        # Step 4: Convert to YAML strings
-        print("📝 [4/8] 生成配置字符串...")
-        stash_yaml = config_to_yaml(stash_config)
+        # Step 3: Convert config to YAML string
+        print("📝 [3/7] 生成配置字符串...")
         clash_yaml = config_to_yaml(clash_config)
-        stash_size = len(stash_yaml.encode("utf-8"))
         clash_size = len(clash_yaml.encode("utf-8"))
-        print(f"   ✓ Stash 配置: {stash_size:,} 字节")
         print(f"   ✓ Clash 配置: {clash_size:,} 字节")
 
-        # Step 5: Load workers template
-        print("📖 [5/8] 读取 Workers 模板...")
+        # Step 4: Load Workers template
+        print("📖 [4/7] 读取 Workers 模板...")
         with open(workers_template_file, "r", encoding="utf-8") as f:
             workers_template = f.read()
         print("   ✓ Workers 模板加载成功")
 
-        # Step 6: Handle SECRET_TOKEN
-        print("🔐 [6/8] 处理访问密钥...")
+        # Step 5: Handle SECRET_TOKEN
+        print("🔐 [5/7] 处理访问密钥...")
         existing_token = extract_token_from_workers(output_file)
 
         if existing_token:
@@ -229,17 +212,16 @@ def main():
             secret_token = generate_secret_token(32)
             print(f"   ✓ 生成新密钥: {secret_token}")
 
-        # Step 7: Generate workers script
-        print("🔄 [7/8] 生成 Workers 脚本...")
-        workers_code = workers_template.replace("{{STASH_CONFIG}}", stash_yaml)
-        workers_code = workers_code.replace("{{CLASH_CONFIG}}", clash_yaml)
+        # Step 6: Generate Workers script
+        print("🔄 [6/7] 生成 Workers 脚本...")
+        workers_code = workers_template.replace("{{CLASH_CONFIG}}", clash_yaml)
         workers_code = workers_code.replace(
             'const SECRET_TOKEN = "YOUR_SECRET_TOKEN_HERE";',
             f'const SECRET_TOKEN = "{secret_token}";',
         )
 
-        # Step 8: Write output
-        print("💾 [8/8] 写入输出文件...")
+        # Step 7: Write output
+        print("💾 [7/7] 写入输出文件...")
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(workers_code)
 
@@ -258,9 +240,7 @@ def main():
         print(f"   TOKEN: {secret_token}")
         print()
         print("📋 订阅地址:")
-        print(f"   Stash:        {url_placeholder('stash', secret_token)}")
-        print(f"   Clash:        {url_placeholder('clash', secret_token)}")
-        print(f"   默认:         {url_placeholder('', secret_token)}")
+        print(f"   Clash:         {url_placeholder(secret_token)}")
         print()
         print("🚀 部署步骤:")
         print("   1. 登录 https://dash.cloudflare.com/")
@@ -283,10 +263,8 @@ def main():
         sys.exit(1)
 
 
-def url_placeholder(path, token):
-    """Generate URL placeholder for output"""
-    if path:
-        return f"https://your-worker.workers.dev/{path}?token={token}"
+def url_placeholder(token):
+    """Generate the Clash subscription URL placeholder for output"""
     return f"https://your-worker.workers.dev/?token={token}"
 
 

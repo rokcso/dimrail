@@ -7,48 +7,49 @@
 ╚═════╝  ╚═╝ ╚═╝     ╚═╝ ╚═╝  ╚═╝ ╚═╝  ╚═╝ ╚═╝ ╚══════╝
 ```
 
-一个精心设计的 Clash/Stash 代理配置项目（纯自用），提供智能分流规则和 Cloudflare Workers 部署方案。
+# Dimrail
+
+一个面向 Clash Meta 内核客户端的个人代理配置项目，提供可维护的智能分流规则，以及可选的 Cloudflare Workers 私有订阅入口。FlClash 可直接使用生成后的订阅地址。
 
 ## 特性
 
-- 🎯 **智能分流** - 基于 GeoIP/GeoSite 的精准分流规则
-- 🔐 **隐私保护** - 通过 Workers 隐藏真实订阅链接
-- 🔄 **统一部署** - 一个 Workers 服务同时支持 Stash 和 Clash
-- 🚀 **性能优化** - DNS 分流、Fake-IP 模式、连接复用
+- 精准分流：基于 GeoIP、GeoSite 和自维护规则集处理国内服务、AI、Apple、GitHub、Web3 和流媒体等流量。
+- Clash Meta 配置：启用 TUN、Sniffer、Fake-IP、DNS 分流和节点自动测速。
+- 私有订阅入口：可通过 Cloudflare Workers 隐藏上游订阅地址，并以 token 保护配置。
+- 多订阅源：生成脚本可将任意数量的上游 provider 自动注入到配置中。
+
+## 使用 FlClash
+
+1. 先按下文的“本地使用”或“Cloudflare Workers 部署”准备配置。
+2. 在 FlClash 中添加订阅；本地使用时导入 `configs/clash.yaml`，Workers 部署时填入生成脚本输出的 URL。
+3. 在 FlClash 启用配置后，按需要开启 TUN 模式。控制器默认仅监听 `127.0.0.1:9090`，不会对局域网开放。
+
+本项目使用 Clash Meta/Mihomo 配置语法；请使用支持该内核的 FlClash 版本。
 
 ## 本地使用
 
-### 1. 克隆项目
-
-```bash
-git clone https://github.com/rokcso/dimrail.git
-cd dimrail
-```
-
-### 2. 配置订阅
-
-编辑 `configs/stash.yaml` 或 `configs/clash.yaml`，替换 `proxy-providers` 中的订阅链接：
+编辑 `configs/clash.yaml`，将 `proxy-providers` 中的示例 `url` 替换为你的订阅链接：
 
 ```yaml
 proxy-providers:
   ProxyProviderA:
-    url: https://your-subscription-url-here  # 替换这里
+    url: https://your-subscription-url-here
 ```
 
-默认模板只启用一个订阅源；如果你需要多个订阅源，建议走下面的 Workers 生成流程，它会自动把多个 provider 注入到 Stash/Clash 配置中。
+本地模板默认使用一个订阅源。如需注入多个上游订阅源并避免在配置中保存真实链接，请使用 Workers 生成流程。
 
 ## Cloudflare Workers 部署
 
-使用 Workers 可以隐藏你的真实订阅链接，提高安全性。**一个 Workers 服务同时支持 Stash 和 Clash 客户端**。
+Workers 将真实订阅链接嵌入生成的配置中，只暴露由 token 保护的 Clash 配置入口。
 
-### 1. 配置私有订阅
+### 1. 创建私有订阅配置
 
 ```bash
 cd workers
 cp config.private.example.yaml config.private.yaml
 ```
 
-编辑 `config.private.yaml`，填入你的真实订阅链接：
+编辑 `config.private.yaml` 并填入至少一个真实订阅链接。provider 名称可自定义：
 
 ```yaml
 proxy-providers:
@@ -58,68 +59,53 @@ proxy-providers:
     url: https://your-another-subscription-url
 ```
 
-`proxy-providers` 至少保留一个即可，名称也不必固定成 `ProxyProviderA/B/C`；`generate.py` 会按你提供的 provider 列表自动生成对应的 Stash/Clash 配置。
-
-### 2. 生成 Workers 脚本
+### 2. 生成 Worker 脚本
 
 ```bash
 python3 -m pip install -r requirements.txt
 python3 generate.py
 ```
 
-脚本会自动完成以下操作：
-1. 读取 `configs/stash.yaml` 和 `configs/clash.yaml`
-2. 合并私有订阅配置 `config.private.yaml`
-3. 自动生成安全的随机访问密钥
-4. 生成统一的 `workers.js` 文件
+脚本会读取 `configs/clash.yaml`，合并私有 provider，生成或复用随机访问密钥，并写入 `workers/workers.js`。私有配置和生成文件均已被 Git 忽略。
 
-### 3. 部署到 Cloudflare
+### 3. 部署并添加到 FlClash
 
-1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)
-2. 进入 **Workers & Pages**
-3. 点击 **Create Application** → **Create Worker**
-4. 粘贴生成的 `workers.js` 文件内容
-5. 点击 **Save and Deploy**
+1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)，进入 **Workers & Pages**。
+2. 创建 Worker，将 `workers/workers.js` 的内容粘贴进去并部署。
+3. 将输出的地址添加到 FlClash：
 
-### 4. 订阅地址
+```text
+https://your-worker.workers.dev/?token=你的密钥
+```
 
-部署成功后，通过不同路径获取对应配置：
+Worker 只接受根路径 `/`；其他路径会返回 `404`。
 
-| 客户端 | 订阅地址 |
-|--------|----------|
-| Stash（默认） | `https://your-worker.workers.dev/?token=你的密钥` |
-| Stash | `https://your-worker.workers.dev/stash?token=你的密钥` |
-| Clash | `https://your-worker.workers.dev/clash?token=你的密钥` |
+## 配置说明
 
-## 配置差异说明
-
-| 配置项 | Stash | Clash |
-|--------|-------|-------|
-| `http.url-rewrite` | ✅ 支持 | ❌ 不支持 |
-| `dns.respect-rules` | ✅ 支持 | ❌ 不支持 |
-| `mixed-port` | ❌ 不需要 | ✅ 需要 |
-| `tun` 模式 | ❌ 使用 Enhanced Mode | ✅ 原生支持 |
-| `external-controller` | ❌ 不需要 | ✅ 默认仅监听 `127.0.0.1` |
+- `configs/clash.yaml`：Clash Meta/Mihomo 主配置模板。
+- `rules/`：自维护规则集，规则格式和新增方式见 `rules/README.md`。
+- 控制器默认绑定 `127.0.0.1`。若调整为可被外部访问，务必把 `secret` 换成随机强密码。
+- 规则匹配顺序是：局域网和国内服务直连 → 指定服务分流 → 中国 GeoSite/GeoIP 直连 → 默认线路兜底。
 
 ## 项目结构
 
-```
+```text
 dimrail/
 ├── configs/
-│   ├── stash.yaml        # Stash 配置模板
-│   └── clash.yaml        # Clash 配置模板
-├── rules/                 # 分流规则文件
-│   ├── ai-offshore.yaml   # AI 服务规则
-│   ├── apple-*.yaml       # Apple 相关规则
-│   ├── github.yaml        # GitHub 规则
-│   ├── web3.yaml          # Web3 规则
-│   └── lancidr.yaml       # 国内 IP 段
+│   └── clash.yaml                # Clash Meta 配置模板
+├── rules/                        # 分流规则集
+│   ├── ai-offshore.yaml
+│   ├── apple-*.yaml
+│   ├── cn-direct.yaml
+│   ├── github.yaml
+│   ├── lancidr.yaml
+│   └── web3.yaml
 └── workers/
-    ├── generate.py              # 配置生成脚本
-    ├── requirements.txt         # generate.py 依赖
-    ├── workers.template.js      # Workers 模板
-    ├── config.private.yaml      # 私有配置（不提交）
-    └── workers.js               # 生成的 Workers（不提交）
+    ├── config.private.example.yaml
+    ├── generate.py               # 生成 Worker 脚本
+    ├── requirements.txt
+    ├── workers.template.js
+    └── workers.js                # 生成文件，不提交
 ```
 
 ## License
