@@ -20,7 +20,7 @@ mode: rule
 # Log level: silent/info/warning/error/debug
 log-level: info
 # Enable IPv6
-ipv6: false
+ipv6: true
 
 # ========== External Controller ==========
 # RESTful API 控制器由 FlClash 客户端接管，模板不设置；本地独立使用时可取消注释：
@@ -71,8 +71,7 @@ sniffer:
 # ========== DNS Configuration ==========
 dns:
   enable: true
-  prefer-h3: true
-  ipv6: false
+  ipv6: true
   # DNS 监听地址由 FlClash 客户端管理，模板不设置：
   # listen: 127.0.0.1:1053
   enhanced-mode: fake-ip
@@ -80,9 +79,11 @@ dns:
   use-hosts: true
   # Respect rules for DNS queries (prevent DNS leak)
   respect-rules: true
-  # Proxy domain resolution through proxy
+  # 节点服务器域名用国内可达的 DoH 解析（对齐机场配置）
   proxy-server-nameserver:
-    - https://dns.google/dns-query
+    - https://1.12.12.12/dns-query
+    - https://223.5.5.5/dns-query
+    - https://doh.pub/dns-query
     - https://cloudflare-dns.com/dns-query
   fake-ip-filter:
     # ========== Local Network ==========
