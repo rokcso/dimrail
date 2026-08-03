@@ -1,0 +1,5 @@
+# 复制为 .dev.vars 后执行 `npm run dev` 进行本地调试（.dev.vars 已被 git 忽略）
+# 生产环境使用 `npx wrangler secret put <名称>` 配置
+
+PROVIDERS_JSON='{"airport-a":"https://example.com/sub?client=clashmetasimple","airport-b":"https://example.com/sub?client=clashmetasimple"}'
+ACCESS_TOKEN='dev-token-please-change'

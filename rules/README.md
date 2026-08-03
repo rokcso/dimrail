@@ -2,7 +2,7 @@
 
 ## 使用注意
 
-本项目的 `reject.yaml` 规则较为保守，建议根据自己的需求调整。
+规则集是列表型规则（域名 / IP 段），按需维护；日常“哪个域名走哪个组”的规则直接在 `configs/clash.yaml` 的 `rules:` 段里改。
 
 ## 规则集维护最佳实践
 
@@ -16,7 +16,7 @@
 | List | ipcidr / domain |
 | TXT | classical |
 
-可见 TXT 格式已经过时，当前主要为了兼容旧配置而存在，YAML 虽然文件体积稍大，但是结构清晰、支持注释，适合个人维护。所以我优先使用 YAML 文件格式维护规则集。
+可见 TXT 格式已经过时，当前主要为了兼容旧配置而存在，YAML 虽然文件体积稍大，但是结构清晰、支持注释，适合个人维护。所以我优先使用 YAML 文件格式维护规则集。规则集通过 `rule-providers` 由客户端（FlClash/Mihomo）按配置的 interval 定时拉取，URL 使用 jsdelivr CDN（国内可达性更好）。
 
 **建议**：
 
@@ -40,7 +40,7 @@ rule-providers:
   google:
     type: http
     behavior: domain
-    url: https://raw.githubusercontent.com/rokcso/dimrail/refs/heads/main/rules/google.yaml # 规则集托管地址
+    url: https://fastly.jsdelivr.net/gh/rokcso/dimrail@main/rules/google.yaml # 规则集托管地址
     interval: 86400
 ```
 
