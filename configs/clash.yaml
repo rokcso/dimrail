@@ -610,9 +610,6 @@ rule-providers:
 # ========== Rules ==========
 # 注意：特定域名规则放在前面，通用规则放在后面
 rules:
-  # ===== 禁用 QUIC/HTTP3 (UDP:443) =====
-  - DST-PORT,443,REJECT,udp
-
   # ===== 特定域名规则（优先级最高）=====
   - DOMAIN-SUFFIX,ahrefs.com,默认线路
   - DOMAIN-SUFFIX,hq1.appsflyer.com,默认线路
