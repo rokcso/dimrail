@@ -16,7 +16,7 @@
 - 🎯 **自控分流**：手写规则直接写在 `configs/clash.yaml` 的 `rules:` 段，哪个域名走哪个组一目了然
 - 🔀 **多机场聚合**：任意多个机场订阅存于 Cloudflare Secret，Worker 统一中转，配置里不暴露真实订阅链接
 - 🔐 **私有入口**：所有请求需要 `?token=` 访问密钥，密钥同样存于 Secret，不进仓库
-- 🚀 **Clash Meta 特性**：TUN、Sniffer、Fake-IP、DNS 分流、节点自动测速
+- 🚀 **Clash Meta 特性**：Sniffer、Fake-IP、DNS 分流、节点自动测速（TUN/端口由 FlClash 客户端管理）
 - ⚡ **一键部署**：`npm run deploy`，或配置 GitHub Actions 后 push 即自动部署
 
 ## 架构
@@ -100,7 +100,7 @@ push 到 `main` 即自动部署（也可手动触发）。需要在仓库 Settin
 ```
 dimrail/
 ├── configs/
-│   └── clash.yaml              # 主配置模板（手写分流规则、代理组、DNS、TUN）
+│   └── clash.yaml              # 主配置模板（手写分流规则、代理组、DNS；端口/TUN 由 FlClash 接管）
 ├── rules/                      # 列表型规则集（rule-providers 远端拉取）
 │   ├── ai-offshore.yaml
 │   ├── apple-*.yaml

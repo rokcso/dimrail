@@ -11,11 +11,10 @@
 # ╚═════╝  ╚═╝ ╚═╝     ╚═╝ ╚═╝  ╚═╝ ╚═╝  ╚═╝ ╚═╝ ╚══════╝
 
 # ========== Basic Settings ==========
-# Mixed port for HTTP and SOCKS5
-mixed-port: 7890
-# Allow LAN connections
-allow-lan: false
-bind-address: 127.0.0.1
+# 端口 / 局域网访问由 FlClash 客户端管理，模板不设置（需要时在 App 内调整）：
+# mixed-port: 7890
+# allow-lan: false
+# bind-address: 127.0.0.1
 # Run mode: rule/global/direct
 mode: rule
 # Log level: silent/info/warning/error/debug
@@ -24,13 +23,9 @@ log-level: info
 ipv6: false
 
 # ========== External Controller ==========
-# RESTful API for Web UI
-external-controller: 127.0.0.1:9090
-# Web UI directory (optional)
-# external-ui: ./ui
-# API secret (set your own password before exposing the controller to LAN)
-# secret: 请设置你自己的密码，不要留空
-secret: "dimrail-changeme"
+# RESTful API 控制器由 FlClash 客户端接管，模板不设置；本地独立使用时可取消注释：
+# external-controller: 127.0.0.1:9090
+# secret: "请设置你自己的密码"
 
 # ========== GeoData Settings ==========
 geodata-mode: true
@@ -46,15 +41,16 @@ global-client-fingerprint: chrome
 # Skip certificate verification for proxy servers
 skip-cert-verify: false
 
-# ========== TUN Mode (Transparent Proxy) ==========
-tun:
-  enable: true
-  stack: system
-  auto-route: true
-  auto-detect-interface: true
-  dns-hijack:
-    - any:53
-    - tcp://any:53
+# ========== TUN Mode ==========
+# TUN 由 FlClash 客户端开关管理，模板不设置（需要时在 App 内开启）：
+# tun:
+#   enable: true
+#   stack: system
+#   auto-route: true
+#   auto-detect-interface: true
+#   dns-hijack:
+#     - any:53
+#     - tcp://any:53
 
 # ========== Sniffer (Domain Sniffing) ==========
 sniffer:
@@ -77,7 +73,8 @@ dns:
   enable: true
   prefer-h3: true
   ipv6: false
-  listen: 127.0.0.1:1053
+  # DNS 监听地址由 FlClash 客户端管理，模板不设置：
+  # listen: 127.0.0.1:1053
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.0/16
   use-hosts: true
