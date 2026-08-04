@@ -20,6 +20,14 @@ import { SHADOWROCKET_TEMPLATE } from './shadowrocket.generated.js';
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const pathname = url.pathname.replace(/\/+$/, '') || '/';
+    const client = (url.searchParams.get('client') || '').toLowerCase();
+
+    // 根路径且未指定 client（或未知 client）：返回纯文本首页，无需鉴权
+    if (pathname === '/' && client !== 'clash' && client !== 'shadowrocket') {
+      return serveHome(url, env);
+    }
+
     const token = url.searchParams.get('token') || '';
     const secretToken = env.ACCESS_TOKEN || '';
 
@@ -33,18 +41,11 @@ export default {
       return textResponse(unauthorizedPage(url.origin), 401);
     }
 
-    const pathname = url.pathname.replace(/\/+$/, '') || '/';
-
     if (pathname === '/') {
-      const client = (url.searchParams.get('client') || '').toLowerCase();
-      if (client === 'clash') {
-        return serveConfig(url, env);
-      }
       if (client === 'shadowrocket') {
         return serveShadowrocket(url, env);
       }
-      // 无 client 或未知 client：返回说明首页
-      return serveHome(url, env);
+      return serveConfig(url, env);
     }
 
     const match = pathname.match(/^\/providers\/([^/]+)$/);
@@ -59,67 +60,51 @@ export default {
   },
 };
 
-// ---------- 首页（说明页）----------
+// ---------- 首页（纯文本说明页，无需鉴权）----------
 async function serveHome(url, env) {
   const token = url.searchParams.get('token') || '';
   const origin = url.origin;
-  const clashUrl = `${origin}/?token=${token}&client=clash`;
-  const srUrl = `${origin}/?token=${token}&client=shadowrocket`;
+  const tokenLabel = token || '<你的token>';
+  const clashUrl = `${origin}/?token=${tokenLabel}&client=clash`;
+  const srUrl = `${origin}/?token=${tokenLabel}&client=shadowrocket`;
 
   let usage = '';
-  const userinfo = await getAggregatedUserinfo(env);
-  if (userinfo) {
-    const m = {
-      upload: /upload=(\d+)/i.exec(userinfo),
-      download: /download=(\d+)/i.exec(userinfo),
-      total: /total=(\d+)/i.exec(userinfo),
-      expire: /expire=(\d+)/i.exec(userinfo),
-    };
-    const gb = (v) => (v / 1024 / 1024 / 1024).toFixed(2);
-    const used = (Number(m.upload?.[1] || 0) + Number(m.download?.[1] || 0)) / 1024 / 1024 / 1024;
-    const total = Number(m.total?.[1] || 0) / 1024 / 1024 / 1024;
-    const expireDate = m.expire ? new Date(Number(m.expire[1]) * 1000).toLocaleDateString('zh-CN') : '';
-    usage = `<div class="usage">📊 流量: <b>${gb(used)}</b> / ${gb(total)} GB${expireDate ? ` · 到期: <b>${expireDate}</b>` : ''}</div>`;
+  if (token) {
+    const userinfo = await getAggregatedUserinfo(env);
+    if (userinfo) {
+      const m = {
+        upload: /upload=(\d+)/i.exec(userinfo),
+        download: /download=(\d+)/i.exec(userinfo),
+        total: /total=(\d+)/i.exec(userinfo),
+        expire: /expire=(\d+)/i.exec(userinfo),
+      };
+      const gb = (v) => (v / 1024 / 1024 / 1024).toFixed(2);
+      const used = (Number(m.upload?.[1] || 0) + Number(m.download?.[1] || 0)) / 1024 / 1024 / 1024;
+      const total = Number(m.total?.[1] || 0) / 1024 / 1024 / 1024;
+      const expireDate = m.expire ? new Date(Number(m.expire[1]) * 1000).toLocaleDateString('zh-CN') : '';
+      usage = `流量: ${used.toFixed(2)} / ${total.toFixed(2)} GB${expireDate ? ` · 到期: ${expireDate}` : ''}\n`;
+    }
   }
 
-  const html = `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dimrail — 私有订阅服务</title>
-<style>
-  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #0f1115; color: #e6e6e6; margin: 0; padding: 40px 20px; }
-  .card { max-width: 640px; margin: 0 auto; background: #1a1e26; border-radius: 14px; padding: 32px; box-shadow: 0 8px 30px rgba(0,0,0,.4); }
-  h1 { margin: 0 0 6px; font-size: 24px; letter-spacing: 1px; }
-  .sub { color: #8b93a3; font-size: 13px; margin-bottom: 24px; }
-  .usage { background: #22303f; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 20px; }
-  h2 { font-size: 14px; color: #8b93a3; margin: 22px 0 8px; }
-  .item { background: #222834; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
-  .item .label { font-size: 12px; color: #8b93a3; margin-bottom: 4px; }
-  .item code { display: block; font-size: 12px; color: #7fb3ff; word-break: break-all; user-select: all; }
-  .hint { font-size: 12px; color: #5b6472; margin-top: 18px; line-height: 1.7; }
-</style>
-</head>
-<body>
-<div class="card">
-  <h1>🚄 Dimrail</h1>
-  <div class="sub">私有代理订阅服务 · 聚合多机场 · 分层分流</div>
-  ${usage}
-  <h2>客户端订阅地址（点击复制）</h2>
-  <div class="item"><div class="label">Clash / FlClash / Stash</div><code>${clashUrl}</code></div>
-  <div class="item"><div class="label">Shadowrocket (iOS)</div><code>${srUrl}</code></div>
-  <div class="hint">
-    💡 添加订阅时选择对应客户端类型；token 请妥善保管，勿公开分享。<br>
-    流量/到期信息随订阅响应头下发，客户端会自动展示。
-  </div>
-</div>
-</body>
-</html>`;
+  const body = [
+    'Dimrail — 私有代理订阅服务',
+    '聚合多机场 · 分层分流 · 双客户端支持',
+    '',
+    usage ? `📊 ${usage}` : '',
+    '订阅地址（按客户端选择）：',
+    `  Clash / FlClash / Stash:  ${clashUrl}`,
+    `  Shadowrocket (iOS):       ${srUrl}`,
+    '',
+    '说明：',
+    '  - 根路径打开本页；下载配置需带 ?client=clash 或 ?client=shadowrocket',
+    '  - token 即访问密钥，请妥善保管，勿公开分享',
+    '  - 流量/到期信息随订阅响应头下发，客户端会自动展示',
+    '',
+  ].filter((l) => l !== undefined && l !== null).join('\n');
 
-  return new Response(html, {
+  return new Response(body, {
     status: 200,
-    headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'private, no-store' },
+    headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'private, no-store' },
   });
 }
 
