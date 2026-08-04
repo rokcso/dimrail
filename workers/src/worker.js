@@ -5,8 +5,9 @@
  * 配合 FlClash（Clash Meta / Mihomo）使用。
  *
  * 路由：
- *   GET /?token=...                  → Clash 主配置（proxy-providers 由 Worker 运行时注入）
- *   GET /providers/<name>?token=...  → 中转拉取对应机场的订阅
+ *   GET /?token=...&client=clash         → Clash 主配置（proxy-providers 由 Worker 运行时注入）
+ *   GET /?token=...&client=shadowrocket  → Shadowrocket 完整配置（节点+策略组+规则）
+ *   GET /providers/<name>?token=...      → 中转拉取对应机场的订阅（Clash provider 格式）
  *
  * Secrets（npx wrangler secret put <名称>）：
  *   PROVIDERS_JSON  机场订阅映射，如 {"airport-a":"https://sub.example/link/xxx"}
@@ -14,6 +15,7 @@
  */
 import { parse, stringify } from 'yaml';
 import { CONFIG_TEMPLATE } from './config.generated.js';
+import { SHADOWROCKET_TEMPLATE } from './shadowrocket.generated.js';
 
 export default {
   async fetch(request, env) {
@@ -34,11 +36,11 @@ export default {
     const pathname = url.pathname.replace(/\/+$/, '') || '/';
 
     if (pathname === '/') {
+      const client = (url.searchParams.get('client') || 'clash').toLowerCase();
+      if (client === 'shadowrocket') {
+        return serveShadowrocket(url, env);
+      }
       return serveConfig(url, env);
-    }
-
-    if (pathname === '/shadowrocket') {
-      return serveShadowrocket(url, env);
     }
 
     const match = pathname.match(/^\/providers\/([^/]+)$/);
@@ -47,7 +49,7 @@ export default {
     }
 
     return textResponse(
-      `Not found: ${pathname}\n\n支持的路径:\n  ${url.origin}/?token=...               (Clash 主配置)\n  ${url.origin}/providers/<name>?token=...  (Clash provider 中转)\n  ${url.origin}/shadowrocket?token=...      (Shadowrocket URI 订阅)`,
+      `Not found: ${pathname}\n\n支持的路径:\n  ${url.origin}/?token=...&client=clash         (Clash 主配置)\n  ${url.origin}/?token=...&client=shadowrocket  (Shadowrocket 配置)\n  ${url.origin}/providers/<name>?token=...      (Clash provider 中转)`,
       404
     );
   },
@@ -213,14 +215,59 @@ function parseProviders(env) {
 // URI 列表订阅（每行一条 vless:// / trojan:// / hysteria2:// ...）。
 // 节点名去重（同名保留第一个），不支持/无法转换的协议跳过。
 
+// ---------- Shadowrocket 完整配置（Surge 风格）----------
+// 与 Clash 端共享同一批机场节点；策略组骨架与规则在 configs/shadowrocket.yaml
+// 手写维护，Worker 仅注入：节点（[Proxy] 段）和各分组的节点成员（按 clash.yaml
+// 的 filter 展开，单一来源）。
+
 async function serveShadowrocket(url, env) {
+  const proxies = await fetchAllProxies(env);
+  const groupFilters = parseGroupFilters();
+
+  const proxyLines = proxies.map(proxyToSurge).filter(Boolean);
+  const skipped = proxies.length - proxyLines.length;
+
+  let config = SHADOWROCKET_TEMPLATE;
+  config = config.replaceAll('# __PROXIES__', proxyLines.join('\n'));
+
+  const regionMarks = {
+    '__AUTO_NODES__': '自动选择',
+    '__MEDIA_NODES__': '流媒体专用',
+    '__HK_NODES__': 'HK 香港',
+    '__SG_NODES__': 'SG 新加坡',
+    '__JP_NODES__': 'JP 日本',
+    '__US_NODES__': 'US 美国',
+    '__OTHER_NODES__': '其他地区',
+  };
+  for (const [mark, groupName] of Object.entries(regionMarks)) {
+    const f = groupFilters[groupName]?.filter || '';
+    const names = f
+      ? proxies.filter((p) => new RegExp(f.replace(/\(\?i\)/g, ''), 'i').test(p.name)).map((p) => p.name)
+      : proxies.map((p) => p.name);
+    config = config.replaceAll(`# ${mark}`, names.join(', '));
+  }
+
+  const body = `# Dimrail — Shadowrocket 配置（由 Cloudflare Worker 生成）\n# 节点: ${proxyLines.length}（跳过 ${skipped}）\n${config}`;
+  const headers = {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'Cache-Control': 'private, no-store',
+    'Profile-Update-Interval': '10800',
+    'Content-Disposition': 'attachment; filename="dimrail.conf"',
+  };
+  const userinfo = await getAggregatedUserinfo(env);
+  if (userinfo) headers['Subscription-Userinfo'] = userinfo;
+
+  return new Response(body, { status: 200, headers });
+}
+
+// 拉取所有机场订阅并合并去重为纯节点列表
+async function fetchAllProxies(env) {
   let providers;
   try {
     providers = parseProviders(env);
-  } catch (err) {
-    return textResponse(`配置错误: ${err.message}`, 500);
+  } catch {
+    return [];
   }
-
   const results = await Promise.allSettled(
     Object.values(providers).map(async (subUrl) => {
       try {
@@ -237,36 +284,90 @@ async function serveShadowrocket(url, env) {
       }
     })
   );
-
-  const proxies = [];
-  for (const r of results) if (r.status === 'fulfilled') proxies.push(...r.value);
-
+  const all = [];
+  for (const r of results) if (r.status === 'fulfilled') all.push(...r.value);
   const seen = new Set();
-  const lines = [];
-  let skipped = 0;
-  for (const p of proxies) {
-    if (!p || typeof p !== 'object' || !p.name) continue;
-    if (seen.has(p.name)) continue; // 去重：同名保留第一个
+  const unique = [];
+  for (const p of all) {
+    if (!p || typeof p !== 'object' || !p.name || seen.has(p.name)) continue;
     seen.add(p.name);
-    const uri = proxyToUri(p);
-    if (uri) {
-      lines.push(uri);
-    } else {
-      skipped++;
-    }
+    unique.push(p);
   }
+  return unique;
+}
 
-  const body = lines.join('\n') + '\n';
-  const headers = {
-    'Content-Type': 'text/plain; charset=utf-8',
-    'Cache-Control': 'private, no-store',
-    'Profile-Update-Interval': '10800',
-    'Content-Disposition': 'attachment; filename="dimrail.txt"',
-  };
-  const userinfo = await getAggregatedUserinfo(env);
-  if (userinfo) headers['Subscription-Userinfo'] = userinfo;
+// 从 Clash 模板解析各策略组的 filter（Shadowrocket 分组节点分配的唯一来源）
+function parseGroupFilters() {
+  try {
+    const doc = parse(CONFIG_TEMPLATE);
+    const map = {};
+    for (const g of doc['proxy-groups'] || []) {
+      map[g.name] = { type: g.type, filter: g.filter || '' };
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
 
-  return new Response(body, { status: 200, headers });
+// 把单个 Clash proxy 反解为 Surge/Shadowrocket 参数式节点行
+function proxyToSurge(p) {
+  try {
+    const name = p.name;
+    const server = p.server;
+    const port = p.port;
+    if (!server || !port || name.includes(',')) return null;
+
+    switch (p.type) {
+      case 'vless': {
+        const params = [`vless`, server, port, `username=${p.uuid}`];
+        if (p.tls) {
+          if (p['reality-opts']) {
+            params.push('tls=true', 'reality=true');
+            if (p['reality-opts']['public-key']) params.push(`public-key=${p['reality-opts']['public-key']}`);
+            if (p['reality-opts']['short-id']) params.push(`short-id=${p['reality-opts']['short-id']}`);
+            if (p['reality-opts']['spider-x']) params.push(`spx=${p['reality-opts']['spider-x']}`);
+          } else {
+            params.push('tls=true');
+          }
+          if (p.servername) params.push(`server-name=${p.servername}`);
+          const fp = p['client-fingerprint'];
+          if (fp && fp !== 'random') params.push(`fingerprint=${fp}`);
+        }
+        if (p.flow) params.push(`flow=${p.flow}`);
+        if (p.network === 'ws') {
+          params.push('obfs=websocket');
+          if (p['ws-opts']?.path) params.push(`obfs-uri=${p['ws-opts'].path}`);
+          if (p['ws-opts']?.headers?.Host) params.push(`obfs-header=Host:${p['ws-opts'].headers.Host}`);
+        }
+        params.push('udp=true');
+        return `${name} = ${params.join(', ')}`;
+      }
+
+      case 'trojan': {
+        const params = [`trojan`, server, port, `password=${p.password || ''}`];
+        if (p.sni) params.push(`server-name=${p.sni}`);
+        if (p['skip-cert-verify']) params.push('skip-cert-verify=true');
+        params.push('udp=true');
+        return `${name} = ${params.join(', ')}`;
+      }
+
+      case 'hysteria2': {
+        const params = [`hysteria2`, server, port, `password=${p.password || ''}`];
+        if (p.sni) params.push(`server-name=${p.sni}`);
+        if (p.obfs) params.push(`obfs=${p.obfs}`);
+        if (p['obfs-password']) params.push(`obfs-password=${p['obfs-password']}`);
+        if (p.alpn?.length) params.push(`alpn=${p.alpn.join(',')}`);
+        params.push('udp=true');
+        return `${name} = ${params.join(', ')}`;
+      }
+
+      default:
+        return null;
+    }
+  } catch {
+    return null;
+  }
 }
 
 // 把单个 Clash proxy 对象反解为标准 URI（v2rayN/Shadowrocket 通用格式）

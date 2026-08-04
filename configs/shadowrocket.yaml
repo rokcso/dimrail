@@ -1,0 +1,58 @@
+# Dimrail Shadowrocket 配置模板
+#
+# 与 configs/clash.yaml 平行维护：Clash 端用 /?token=xxx&client=clash，
+# Shadowrocket 端用 /?token=xxx&client=shadowrocket。
+#
+# 注入标记由 Worker 生成时替换（下文中形如 井号+标记 的行）：
+#   __PROXIES__       → [Proxy] 段全部节点（Surge 参数式，每行 名称 = 协议, ...）
+#   __AUTO_NODES__    → 自动选择组节点（全节点，过滤广告/公告词）
+#   __MEDIA_NODES__   → 流媒体专用组节点（filter 与 clash.yaml 一致）
+#   __HK_NODES__ 等   → 各地区组节点（filter 从 clash.yaml 的 proxy-groups 解析，单一来源）
+#
+# 规则引用 blackmatrix7 的 Shadowrocket 格式规则集（与 Clash 端规则语义一致，
+# 客户端定时拉取更新）。
+
+[General]
+loglevel = notify
+dns-server = 223.5.5.5, 119.29.29.29
+ipv6 = true
+
+[Proxy]
+# __PROXIES__
+
+[Proxy Group]
+默认线路 = select, 自动选择, HK 香港, SG 新加坡, JP 日本, US 美国, 其他地区, DIRECT
+AI Service = select, US 美国, SG 新加坡, JP 日本, HK 香港, 其他地区, 默认线路
+流媒体 = select, 流媒体专用, HK 香港, SG 新加坡, JP 日本, US 美国, 其他地区, 默认线路
+自动选择 = url-test, # __AUTO_NODES__, interval=600, timeout=5, lazy=true
+流媒体专用 = url-test, # __MEDIA_NODES__, interval=600, timeout=5, lazy=true
+HK 香港 = select, HK-Auto, # __HK_NODES__
+HK-Auto = url-test, # __HK_NODES__, interval=600, timeout=5, lazy=true
+SG 新加坡 = select, SG-Auto, # __SG_NODES__
+SG-Auto = url-test, # __SG_NODES__, interval=600, timeout=5, lazy=true
+JP 日本 = select, JP-Auto, # __JP_NODES__
+JP-Auto = url-test, # __JP_NODES__, interval=600, timeout=5, lazy=true
+US 美国 = select, US-Auto, # __US_NODES__
+US-Auto = url-test, # __US_NODES__, interval=600, timeout=5, lazy=true
+其他地区 = select, 其他-Auto, # __OTHER_NODES__
+其他-Auto = url-test, # __OTHER_NODES__, interval=600, timeout=5, lazy=true
+DIRECT = direct
+
+[Rule]
+# ===== 服务分类（blackmatrix7 Shadowrocket 规则集）=====
+RULE-SET,https://fastly.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Shadowrocket/OpenAI/OpenAI.list,AI Service
+RULE-SET,https://fastly.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Shadowrocket/Anthropic/Anthropic.list,AI Service
+RULE-SET,https://fastly.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Shadowrocket/Claude/Claude.list,AI Service
+RULE-SET,https://fastly.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Shadowrocket/Gemini/Gemini.list,AI Service
+RULE-SET,https://fastly.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Shadowrocket/Netflix/Netflix.list,流媒体
+RULE-SET,https://fastly.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Shadowrocket/Disney/Disney.list,流媒体
+RULE-SET,https://fastly.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Shadowrocket/PrimeVideo/PrimeVideo.list,流媒体
+RULE-SET,https://fastly.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Shadowrocket/HBO/HBO.list,流媒体
+RULE-SET,https://fastly.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Shadowrocket/Spotify/Spotify.list,流媒体
+RULE-SET,https://fastly.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Shadowrocket/YouTube/YouTube.list,流媒体
+RULE-SET,https://fastly.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Shadowrocket/GitHub/GitHub.list,默认线路
+RULE-SET,https://fastly.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Shadowrocket/Apple/Apple.list,默认线路
+RULE-SET,https://fastly.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Shadowrocket/Direct/Direct.list,DIRECT
+# ===== 兜底 =====
+GEOIP,CN,DIRECT
+FINAL,默认线路

@@ -327,7 +327,7 @@ proxy-groups:
     lazy: true
     tolerance: 100
     use: [ProxyProviderA]
-    filter: "(?i)(美国|🇺🇸|US|USA|United States|America|Los Angeles|New York|San Francisco|Seattle|Chicago|美西|美东|西部|东部)
+    filter: "(?i)(美国|🇺🇸|US|USA|United States|America|Los Angeles|New York|San Francisco|Seattle|Chicago|美西|美东|西部|东部)"
 
   - name: HK 香港
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Hong_Kong.png
