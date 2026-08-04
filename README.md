@@ -28,7 +28,7 @@
 
 ```
 ┌─ FlClash（只订阅一个地址）───────────────────────────┐
-│  https://<worker>.workers.dev/?token=xxx            │
+│  https://<域名>/?token=xxx&client=clash              │
 └───────────────┬──────────────────────────┬──────────┘
                 │ ① 拉取主配置               │ ③ 按需拉取各机场节点
                 ▼                          ▼
@@ -156,7 +156,7 @@ npx wrangler secret put ACCESS_TOKEN     # 生成: openssl rand -hex 24
 # 4. 部署
 npm run deploy
 
-# 5. 添加订阅
+# 5. 添加订阅（根路径 ?token= 会打开说明首页）
 #    FlClash:        https://<你的域名>/?token=<ACCESS_TOKEN>&client=clash
 #    Shadowrocket:   https://<你的域名>/?token=<ACCESS_TOKEN>&client=shadowrocket
 ```
