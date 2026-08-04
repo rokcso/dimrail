@@ -51,7 +51,7 @@ export default {
 
 // ---------- 主配置 ----------
 
-function serveConfig(url, env) {
+async function serveConfig(url, env) {
   let providers;
   try {
     providers = parseProviders(env);
@@ -70,16 +70,22 @@ function serveConfig(url, env) {
 
   const body = `# Dimrail — 由 Cloudflare Worker 生成的 Clash 配置\n# 订阅源: ${names.join(', ')}\n${config}`;
 
+  const headers = {
+    'Content-Type': 'text/yaml; charset=utf-8',
+    'Cache-Control': 'private, no-store',
+    'ETag': `W/"${fnv1a(body)}"`,
+    'X-Config-Type': 'clash',
+    // 客户端按此间隔自动重新拉取主订阅（与 proxy-provider interval 保持一致）
+    'Profile-Update-Interval': '10800',
+  };
+
+  // 聚合所有机场的用量/到期信息，FlClash/Clash 在主订阅响应头中读取并展示
+  const userinfo = await getAggregatedUserinfo(env);
+  if (userinfo) headers['Subscription-Userinfo'] = userinfo;
+
   return new Response(body, {
     status: 200,
-    headers: {
-      'Content-Type': 'text/yaml; charset=utf-8',
-      'Cache-Control': 'private, no-store',
-      'ETag': `W/"${fnv1a(body)}"`,
-      'X-Config-Type': 'clash',
-      // 客户端按此间隔自动重新拉取主订阅（与 proxy-provider interval 保持一致）
-      'Profile-Update-Interval': '10800',
-    },
+    headers,
   });
 }
 
@@ -100,6 +106,72 @@ function buildProvidersYaml(providers, origin, token) {
         ].join('\n')
     )
     .join('\n');
+}
+
+// ---------- 订阅用量聚合 ----------
+// 拉取所有机场的 subscription-userinfo 响应头并聚合成一个，挂到主配置响应头，
+// 这样 FlClash/Clash 在主订阅界面也能展示流量用量与到期时间。
+// upload/download/total 求和，expire 取最早到期；带简单内存缓存避免每次主订阅都拉上游。
+const usageCache = { data: '', ts: 0 };
+const USAGE_TTL = 10 * 60 * 1000; // 10 分钟
+
+async function getAggregatedUserinfo(env) {
+  if (usageCache.data && Date.now() - usageCache.ts < USAGE_TTL) {
+    return usageCache.data;
+  }
+  let providers;
+  try {
+    providers = parseProviders(env);
+  } catch {
+    return '';
+  }
+
+  const results = await Promise.allSettled(
+    Object.values(providers).map(async (url) => {
+      try {
+        const res = await fetch(url, {
+          headers: { 'User-Agent': 'clash.meta' },
+          redirect: 'follow',
+        });
+        const userinfo = res.ok ? res.headers.get('subscription-userinfo') : '';
+        await res.body?.cancel?.();
+        return userinfo || '';
+      } catch {
+        return '';
+      }
+    })
+  );
+
+  let upload = 0;
+  let download = 0;
+  let total = 0;
+  let expire = 0;
+  for (const r of results) {
+    if (r.status !== 'fulfilled' || !r.value) continue;
+    const m = {
+      upload: /upload=(\d+)/i.exec(r.value),
+      download: /download=(\d+)/i.exec(r.value),
+      total: /total=(\d+)/i.exec(r.value),
+      expire: /expire=(\d+)/i.exec(r.value),
+    };
+    if (m.upload) upload += Number(m.upload[1]);
+    if (m.download) download += Number(m.download[1]);
+    if (m.total) total += Number(m.total[1]);
+    if (m.expire) {
+      const e = Number(m.expire[1]);
+      expire = expire === 0 ? e : Math.min(expire, e);
+    }
+  }
+
+  const parts = [];
+  if (upload) parts.push(`upload=${upload}`);
+  if (download) parts.push(`download=${download}`);
+  if (total) parts.push(`total=${total}`);
+  if (expire) parts.push(`expire=${expire}`);
+  const data = parts.join('; ');
+  usageCache.data = data;
+  usageCache.ts = Date.now();
+  return data;
 }
 
 function parseProviders(env) {
