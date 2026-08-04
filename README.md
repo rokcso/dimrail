@@ -156,12 +156,36 @@ npx wrangler secret put ACCESS_TOKEN     # 生成: openssl rand -hex 24
 # 4. 部署
 npm run deploy
 
-# 5. 添加订阅（根路径 ?token= 会打开说明首页）
-#    FlClash:        https://<你的域名>/?token=<ACCESS_TOKEN>&client=clash
-#    Shadowrocket:   https://<你的域名>/?token=<ACCESS_TOKEN>&client=shadowrocket
+# 5. 部署成功，获取订阅地址（根路径 ?token= 会打开纯文本说明首页，含地址与用量）
+#    https://<你的域名>/?token=<ACCESS_TOKEN>
 ```
 
 > 说明：`PROVIDERS_JSON` 的键（机场名）只允许字母、数字、`_`、`-`；值必须是机场订阅 URL（一般带 `?client=clashmetasimple` 之类的参数）。
+
+### 客户端配置
+
+#### FlClash（Clash Meta）
+
+1. 添加订阅，URL 填：
+   ```
+   https://<你的域名>/?token=<ACCESS_TOKEN>&client=clash
+   ```
+2. 更新订阅，即可看到分层策略组（默认线路 / AI Service / 流媒体 / 地区组）
+
+#### Shadowrocket（iOS）
+
+> ⚠️ Shadowrocket 是「订阅 + 配置」两层模型：**Subscribe 类型只导入节点**，会丢弃策略组和规则；**必须在「配置」页以 Config 类型导入**才能获得完整策略。
+
+1. 底部导航进入「**配置**」页 → 右上角 **➕**
+2. 粘贴 URL（远程配置文件）：
+   ```
+   https://<你的域名>/?token=<ACCESS_TOKEN>&client=shadowrocket
+   ```
+3. 下载完成后点击该远程文件 → 选择「**使用配置**」
+4. 回到首页，把「**全局路由**」切换为「**配置**」
+5. 无需在首页添加 Subscribe 订阅——配置内已内联全部节点（113+）、策略组与规则
+
+> 两个地址返回同一批聚合节点，但格式不同：`client=clash` 是 Clash YAML，`client=shadowrocket` 是 Surge 风格配置。
 
 ## 日常使用
 
