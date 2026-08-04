@@ -281,10 +281,10 @@ proxy-groups:
     filter: "^(?!.*(?:群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|\\.com\\b|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
     proxies:
       - 自动选择
+      - US 美国
       - HK 香港
       - SG 新加坡
       - JP 日本
-      - US 美国
       - 其他地区
       - DIRECT
 
@@ -312,6 +312,23 @@ proxy-groups:
       - 默认线路
 
   # ========== Region-based Groups ==========
+  - name: US 美国
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/United_States.png
+    type: select
+    use: [ProxyProviderA]
+    filter: "(?i)(美国|🇺🇸|US|USA|United States|America|Los Angeles|New York|San Francisco|Seattle|Chicago|美西|美东|西部|东部)"
+    proxies:
+      - US-Auto
+  - name: US-Auto
+    hidden: true
+    type: url-test
+    interval: 600
+    timeout: 5000
+    lazy: true
+    tolerance: 100
+    use: [ProxyProviderA]
+    filter: "(?i)(美国|🇺🇸|US|USA|United States|America|Los Angeles|New York|San Francisco|Seattle|Chicago|美西|美东|西部|东部)
+
   - name: HK 香港
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Hong_Kong.png
     type: select
@@ -363,33 +380,6 @@ proxy-groups:
     use: [ProxyProviderA]
     filter: "(?i)(日本|🇯🇵|东京|大阪|JP|Japan|Tokyo|Osaka)"
 
-  - name: US 美国
-    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/United_States.png
-    type: select
-    use: [ProxyProviderA]
-    filter: "(?i)(美国|🇺🇸|US|USA|United States|America|Los Angeles|New York|San Francisco|Seattle|Chicago|美西|美东|西部|东部)"
-    proxies:
-      - US-Auto
-  - name: US-Auto
-    hidden: true
-    type: url-test
-    interval: 600
-    timeout: 5000
-    lazy: true
-    tolerance: 100
-    use: [ProxyProviderA]
-    filter: "(?i)(美国|🇺🇸|US|USA|United States|America|Los Angeles|New York|San Francisco|Seattle|Chicago|美西|美东|西部|东部)"
-
-  - name: 流媒体专用
-    hidden: true
-    type: url-test
-    interval: 600
-    timeout: 5000
-    lazy: true
-    tolerance: 100
-    use: [ProxyProviderA]
-    filter: "(?i)(IPLC|IEPL|专线|游戏|Game|Media|流媒体|Netflix|Disney|HBO|Prime|Video|NF|原生|Native|解锁|Unlock|Premium|Elite|Pro)"
-
   - name: 其他地区
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/World_Map.png
     type: select
@@ -406,6 +396,16 @@ proxy-groups:
     tolerance: 100
     use: [ProxyProviderA]
     filter: "(?i)^(?!.*(?:🇭🇰|香港|HK|HKG|Hong Kong|🇲🇴|澳门|Macau|Macao|🇯🇵|日本|JP|Japan|Tokyo|Osaka|🇺🇸|美国|US|USA|United States|America|Los Angeles|New York|San Francisco|Seattle|Chicago|美西|美东|西部|东部|🇸🇬|新加坡|SG|Singapore|狮城|坡|🇨🇳|中国|CN|China|\\.com\\b|群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
+
+  - name: 流媒体专用
+    hidden: true
+    type: url-test
+    interval: 600
+    timeout: 5000
+    lazy: true
+    tolerance: 100
+    use: [ProxyProviderA]
+    filter: "(?i)(IPLC|IEPL|专线|游戏|Game|Media|流媒体|Netflix|Disney|HBO|Prime|Video|NF|原生|Native|解锁|Unlock|Premium|Elite|Pro)"
 
   # ========== Auto-select Groups ==========
   - name: 自动选择
