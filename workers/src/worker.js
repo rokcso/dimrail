@@ -37,13 +37,17 @@ export default {
       return serveConfig(url, env);
     }
 
+    if (pathname === '/shadowrocket') {
+      return serveShadowrocket(url, env);
+    }
+
     const match = pathname.match(/^\/providers\/([^/]+)$/);
     if (match) {
       return relayProvider(match[1], env);
     }
 
     return textResponse(
-      `Not found: ${pathname}\n\n支持的路径:\n  ${url.origin}/?token=...\n  ${url.origin}/providers/<name>?token=...`,
+      `Not found: ${pathname}\n\n支持的路径:\n  ${url.origin}/?token=...               (Clash 主配置)\n  ${url.origin}/providers/<name>?token=...  (Clash provider 中转)\n  ${url.origin}/shadowrocket?token=...      (Shadowrocket URI 订阅)`,
       404
     );
   },
@@ -202,6 +206,161 @@ function parseProviders(env) {
     }
   }
   return providers;
+}
+
+// ---------- Shadowrocket 订阅（URI 列表）----------
+// 与 Clash 主配置完全独立：/shadowrocket 返回 Shadowrocket 原生支持的
+// URI 列表订阅（每行一条 vless:// / trojan:// / hysteria2:// ...）。
+// 节点名去重（同名保留第一个），不支持/无法转换的协议跳过。
+
+async function serveShadowrocket(url, env) {
+  let providers;
+  try {
+    providers = parseProviders(env);
+  } catch (err) {
+    return textResponse(`配置错误: ${err.message}`, 500);
+  }
+
+  const results = await Promise.allSettled(
+    Object.values(providers).map(async (subUrl) => {
+      try {
+        const res = await fetch(subUrl, {
+          headers: { 'User-Agent': 'clash.meta' },
+          redirect: 'follow',
+        });
+        if (!res.ok) return [];
+        const doc = parse(await res.text());
+        if (Array.isArray(doc)) return doc;
+        return Array.isArray(doc?.proxies) ? doc.proxies : [];
+      } catch {
+        return [];
+      }
+    })
+  );
+
+  const proxies = [];
+  for (const r of results) if (r.status === 'fulfilled') proxies.push(...r.value);
+
+  const seen = new Set();
+  const lines = [];
+  let skipped = 0;
+  for (const p of proxies) {
+    if (!p || typeof p !== 'object' || !p.name) continue;
+    if (seen.has(p.name)) continue; // 去重：同名保留第一个
+    seen.add(p.name);
+    const uri = proxyToUri(p);
+    if (uri) {
+      lines.push(uri);
+    } else {
+      skipped++;
+    }
+  }
+
+  const body = lines.join('\n') + '\n';
+  const headers = {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'Cache-Control': 'private, no-store',
+    'Profile-Update-Interval': '10800',
+    'Content-Disposition': 'attachment; filename="dimrail.txt"',
+  };
+  const userinfo = await getAggregatedUserinfo(env);
+  if (userinfo) headers['Subscription-Userinfo'] = userinfo;
+
+  return new Response(body, { status: 200, headers });
+}
+
+// 把单个 Clash proxy 对象反解为标准 URI（v2rayN/Shadowrocket 通用格式）
+function proxyToUri(p) {
+  try {
+    const name = encodeURIComponent(p.name);
+    const server = p.server;
+    const port = p.port;
+    if (!server || !port) return null;
+
+    switch (p.type) {
+      case 'vless': {
+        const q = new URLSearchParams();
+        q.set('encryption', 'none');
+        q.set('type', p.network || 'tcp');
+        if (p.tls) {
+          if (p['reality-opts']) {
+            q.set('security', 'reality');
+            if (p['reality-opts']['public-key']) q.set('pbk', p['reality-opts']['public-key']);
+            if (p['reality-opts']['short-id']) q.set('sid', p['reality-opts']['short-id']);
+            if (p['reality-opts']['spider-x']) q.set('spx', p['reality-opts']['spider-x']);
+          } else {
+            q.set('security', 'tls');
+          }
+          if (p['client-fingerprint']) q.set('fp', p['client-fingerprint']);
+          if (p.servername) q.set('sni', p.servername);
+        }
+        if (p.flow) q.set('flow', p.flow);
+        if (p.network === 'ws') {
+          if (p['ws-opts']?.path) q.set('path', p['ws-opts'].path);
+          if (p['ws-opts']?.headers?.Host) q.set('host', p['ws-opts'].headers.Host);
+        } else if (p.network === 'grpc') {
+          if (p['grpc-opts']?.grpc-service-name) q.set('serviceName', p['grpc-opts']['grpc-service-name']);
+        }
+        return `vless://${p.uuid}@${server}:${port}?${q.toString()}#${name}`;
+      }
+
+      case 'trojan': {
+        const q = new URLSearchParams();
+        if (p.sni) q.set('sni', p.sni);
+        if (p.alpn?.length) q.set('alpn', p.alpn.join(','));
+        if (p['skip-cert-verify']) q.set('allowInsecure', '1');
+        return `trojan://${encodeURIComponent(p.password || '')}@${server}:${port}?${q.toString()}#${name}`;
+      }
+
+      case 'hysteria2': {
+        const q = new URLSearchParams();
+        if (p.sni) q.set('sni', p.sni);
+        if (p.obfs) q.set('obfs', p.obfs);
+        if (p['obfs-password']) q.set('obfs-password', p['obfs-password']);
+        if (p.alpn?.length) q.set('alpn', p.alpn.join(','));
+        return `hysteria2://${encodeURIComponent(p.password || '')}@${server}:${port}?${q.toString()}#${name}`;
+      }
+
+      case 'vmess': {
+        const v = {
+          v: '2',
+          ps: p.name,
+          add: server,
+          port: String(port),
+          id: p.uuid,
+          aid: String(p.alterId ?? 0),
+          scy: p.cipher || 'auto',
+          net: p.network || 'tcp',
+          type: p['tcp-opts']?.type || 'none',
+          host: p['ws-opts']?.headers?.Host || p['grpc-opts']?.['grpc-service-name'] || '',
+          path: p['ws-opts']?.path || '',
+          tls: p.tls ? 'tls' : '',
+          sni: p.servername || '',
+        };
+        const b64 = btoa(JSON.stringify(v));
+        return `vmess://${b64}#${name}`;
+      }
+
+      case 'ss': {
+        const method = p.cipher || 'aes-256-gcm';
+        const pass = `${method}:${p.password}`;
+        const b64 = btoa(pass).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        let uri = `ss://${b64}@${server}:${port}`;
+        const plugin = p.plugin;
+        if (plugin && plugin.opts) {
+          const q = new URLSearchParams();
+          q.set('plugin', `${plugin.plugin};${plugin.opts}`);
+          uri += `?${q.toString()}`;
+        }
+        return `${uri}#${name}`;
+      }
+
+      default:
+        return null;
+    }
+  } catch {
+    return null;
+  }
 }
 
 // ---------- 订阅中转 ----------

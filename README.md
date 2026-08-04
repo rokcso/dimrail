@@ -15,6 +15,7 @@
 
 - 🎯 **分层分流策略**：规则层自动分类 → 服务层选地区 → 地区层选节点，每一层职责单一（见下方「策略设计」）
 - 🔀 **多机场聚合**：任意多个机场订阅存于 Cloudflare Secret，Worker 统一中转，配置里不暴露真实订阅链接
+- 📱 **双客户端**：`/` 下发 Clash Meta 配置（FlClash 等），`/shadowrocket` 下发 URI 列表订阅（Shadowrocket），同一份聚合节点两套格式
 - 📊 **用量一览**：中转透传各机场流量/到期信息，并在主订阅聚合展示（FlClash 直接可见）
 - 🔐 **私有入口**：所有请求需要 `?token=` 访问密钥，密钥存于 Secret，不进仓库
 - 🚀 **Clash Meta 特性**：Sniffer、Fake-IP、DNS 分流、节点自动测速（TUN/端口由 FlClash 客户端管理）
@@ -156,7 +157,10 @@ npx wrangler secret put ACCESS_TOKEN     # 生成: openssl rand -hex 24
 npm run deploy
 
 # 5. FlClash 中添加订阅
-#    https://<你的worker>.workers.dev/?token=<ACCESS_TOKEN>
+#    https://<你的域名>/?token=<ACCESS_TOKEN>
+#
+# Shadowrocket（iOS）添加类型「Subscribe」的订阅：
+#    https://<你的域名>/shadowrocket?token=<ACCESS_TOKEN>
 ```
 
 > 说明：`PROVIDERS_JSON` 的键（机场名）只允许字母、数字、`_`、`-`；值必须是机场订阅 URL（一般带 `?client=clashmetasimple` 之类的参数）。
