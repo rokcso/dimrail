@@ -327,23 +327,8 @@ proxy-groups:
       - 其他线路
       - 手动选择
 
-  - name: Spotify
-    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Spotify.png
-    type: select
-    use: [ProxyProviderA]
-    proxies:
-      - 流媒体专用
-      - HK 香港
-      - SG 新加坡
-      - US 美国
-      - JP 日本
-      - TW 台湾
-      - UK 英国
-      - 其他线路
-      - 手动选择
-
-  - name: YouTube
-    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/YouTube.png
+  - name: 流媒体
+    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Media.png
     type: select
     use: [ProxyProviderA]
     proxies:
@@ -628,8 +613,8 @@ rules:
   - RULE-SET,github,GitHub
   - RULE-SET,web3,Web3
   - RULE-SET,telegram,Telegram
-  - RULE-SET,spotify,Spotify
-  - RULE-SET,youtube,YouTube
+  - RULE-SET,spotify,流媒体
+  - RULE-SET,youtube,流媒体
 
   # ===== 私有网络直连 =====
   - RULE-SET,lancidr,DIRECT
