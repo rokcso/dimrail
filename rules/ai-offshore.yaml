@@ -1,19 +1,13 @@
-# AI Offshore Services Domain Rules
+# AI Offshore Services Domain Rules (Long-tail)
 # Purpose: Route AI services that require overseas access
-# Updated: 2025-10-31 based on market share data
+# Updated: 2026-02-05
+#
+# 来源策略：头部 AI 厂商已由第三方规则集覆盖，本文件只保留第三方没有的长尾。
+#   OpenAI/ChatGPT/Sora      → meta-rules-dat geosite/openai.list（见 rule-providers: openai）
+#   Claude/Anthropic         → meta-rules-dat geosite/anthropic.list（见 rule-providers: anthropic）
+#   Gemini/Copilot 等其余 AI → 见下方各段（第三方无对应合集，保留自维护）
 
 payload:
-  # ===== OpenAI ChatGPT & Sora (Market Share: 60.7%) =====
-  - +.openai.com
-  - +.chatgpt.com
-  - +.oaistatic.com
-  - auth0.openai.com
-  - api.openai.com
-  - platform.openai.com
-  - cdn.openai.com
-  - file.oaiusercontent.com
-  - +.sora.com # Video generation (preview)
-
   # ===== Microsoft Copilot (Market Share: 14.0%) =====
   - +.copilot.microsoft.com
   - copilot.cloud.microsoft
@@ -36,11 +30,6 @@ payload:
 
   # ===== Perplexity AI (Market Share: 6.6%) =====
   - +.perplexity.ai
-
-  # ===== Claude / Anthropic (Market Share: 3.6%) =====
-  - +.claude.ai
-  - +.anthropic.com
-  - console.anthropic.com
 
   # ===== Grok / xAI (Market Share: 0.8%) =====
   - +.grok.com

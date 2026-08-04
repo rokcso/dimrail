@@ -524,62 +524,75 @@ proxy-groups:
     filter: "^(?!.*(?:群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|\\.com\\b|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
 
 # ========== Rule Providers ==========
+# 规则集来源策略：优先使用第三方维护的高质量规则集，第三方没有的才自维护。
+#   - Loyalsoldier/clash-rules（~27.9k stars，Clash 生态标准）：国内直连补充、局域网
+#   - MetaCubeX/meta-rules-dat（每日更新，v2fly 数据源）：Apple/GitHub/AI/流媒体/Telegram 等分类
+#   - 自维护（rules/*.yaml）：仅第三方没有的合集（AI 长尾、Web3）
+# 注意：behavior: domain 下裸域名=精确匹配，"+." 前缀=后缀匹配（含子域名）
 rule-providers:
-  cn-direct:
+  # ===== 第三方：Loyalsoldier/clash-rules =====
+  direct:
     type: http
     behavior: domain
-    format: yaml
-    url: https://fastly.jsdelivr.net/gh/rokcso/dimrail@main/rules/cn-direct.yaml
-    path: ./rules/cn-direct.yaml
-    interval: 604800
+    url: https://fastly.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/direct.txt
+    path: ./rules/direct.txt
+    interval: 86400
   lancidr:
     type: http
     behavior: ipcidr
-    format: yaml
-    url: https://fastly.jsdelivr.net/gh/rokcso/dimrail@main/rules/lancidr.yaml
-    path: ./rules/lancidr.yaml
-    interval: 604800
-  ai-offshore:
-    type: http
-    behavior: domain
-    format: yaml
-    url: https://fastly.jsdelivr.net/gh/rokcso/dimrail@main/rules/ai-offshore.yaml
-    path: ./rules/ai-offshore.yaml
-    interval: 604800
-  apple-offshore:
-    type: http
-    behavior: domain
-    format: yaml
-    url: https://fastly.jsdelivr.net/gh/rokcso/dimrail@main/rules/apple-offshore.yaml
-    path: ./rules/apple-offshore.yaml
-    interval: 604800
+    url: https://fastly.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/lancidr.txt
+    path: ./rules/lancidr.txt
+    interval: 86400
+
+  # ===== 第三方：MetaCubeX/meta-rules-dat（format: text）=====
   apple-cn:
     type: http
     behavior: domain
-    format: yaml
-    url: https://fastly.jsdelivr.net/gh/rokcso/dimrail@main/rules/apple-cn.yaml
-    path: ./rules/apple-cn.yaml
-    interval: 604800
+    format: text
+    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/apple-cn.list
+    path: ./rules/apple-cn.list
+    interval: 86400
+  apple:
+    type: http
+    behavior: domain
+    format: text
+    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/apple.list
+    path: ./rules/apple.list
+    interval: 86400
   github:
     type: http
     behavior: domain
-    format: yaml
-    url: https://fastly.jsdelivr.net/gh/rokcso/dimrail@main/rules/github.yaml
-    path: ./rules/github.yaml
-    interval: 604800
-  web3:
+    format: text
+    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/github.list
+    path: ./rules/github.list
+    interval: 86400
+  openai:
     type: http
     behavior: domain
-    format: yaml
-    url: https://fastly.jsdelivr.net/gh/rokcso/dimrail@main/rules/web3.yaml
-    path: ./rules/web3.yaml
-    interval: 604800
+    format: text
+    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/openai.list
+    path: ./rules/openai.list
+    interval: 86400
+  anthropic:
+    type: http
+    behavior: domain
+    format: text
+    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/anthropic.list
+    path: ./rules/anthropic.list
+    interval: 86400
   telegram:
     type: http
     behavior: domain
     format: text
     url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/telegram.list
     path: ./rules/telegram.list
+    interval: 86400
+  telegram-cidr:
+    type: http
+    behavior: ipcidr
+    format: text
+    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geoip/telegram.list
+    path: ./rules/telegram-cidr.list
     interval: 86400
   spotify:
     type: http
@@ -595,6 +608,50 @@ rule-providers:
     url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/youtube.list
     path: ./rules/youtube.list
     interval: 86400
+  netflix:
+    type: http
+    behavior: domain
+    format: text
+    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/netflix.list
+    path: ./rules/netflix.list
+    interval: 86400
+  disney:
+    type: http
+    behavior: domain
+    format: text
+    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/disney.list
+    path: ./rules/disney.list
+    interval: 86400
+  primevideo:
+    type: http
+    behavior: domain
+    format: text
+    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/primevideo.list
+    path: ./rules/primevideo.list
+    interval: 86400
+  hbo:
+    type: http
+    behavior: domain
+    format: text
+    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/hbo.list
+    path: ./rules/hbo.list
+    interval: 86400
+
+  # ===== 自维护（第三方没有对应合集）=====
+  ai-offshore:
+    type: http
+    behavior: domain
+    format: yaml
+    url: https://fastly.jsdelivr.net/gh/rokcso/dimrail@main/rules/ai-offshore.yaml
+    path: ./rules/ai-offshore.yaml
+    interval: 604800
+  web3:
+    type: http
+    behavior: domain
+    format: yaml
+    url: https://fastly.jsdelivr.net/gh/rokcso/dimrail@main/rules/web3.yaml
+    path: ./rules/web3.yaml
+    interval: 604800
 
 # ========== Rules ==========
 # 注意：特定域名规则放在前面，通用规则放在后面
@@ -607,18 +664,25 @@ rules:
   - DOMAIN-SUFFIX,rokcso.com,DIRECT
   - DOMAIN-SUFFIX,coryso.com,DIRECT
 
-  # ===== 国内服务直连（补充规则）=====
-  - RULE-SET,cn-direct,DIRECT
-
-  # ===== 服务分类规则 =====
-  - RULE-SET,ai-offshore,AI Service
-  - RULE-SET,apple-cn,DIRECT
-  - RULE-SET,apple-offshore,Apple
+  # ===== 服务分类规则（第三方规则集）=====
+  - RULE-SET,openai,AI Service
+  - RULE-SET,anthropic,AI Service
+  - RULE-SET,ai-offshore,AI Service # 长尾 AI（第三方无合集）
+  - RULE-SET,apple-cn,DIRECT # Apple 中国直连（须在 apple 之前）
+  - RULE-SET,apple,Apple
   - RULE-SET,github,GitHub
   - RULE-SET,web3,Web3
   - RULE-SET,telegram,Telegram
+  - RULE-SET,telegram-cidr,Telegram
   - RULE-SET,spotify,流媒体
   - RULE-SET,youtube,流媒体
+  - RULE-SET,netflix,流媒体
+  - RULE-SET,disney,流媒体
+  - RULE-SET,primevideo,流媒体
+  - RULE-SET,hbo,流媒体
+
+  # ===== 国内服务直连（Loyalsoldier direct 补充）=====
+  - RULE-SET,direct,DIRECT
 
   # ===== 私有网络直连 =====
   - RULE-SET,lancidr,DIRECT

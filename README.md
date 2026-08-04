@@ -102,12 +102,9 @@ dimrail/
 ├── configs/
 │   └── clash.yaml              # 主配置模板（手写分流规则、代理组、DNS；端口/TUN 由 FlClash 接管）
 ├── rules/                      # 列表型规则集（rule-providers 远端拉取）
-│   ├── ai-offshore.yaml
-│   ├── apple-*.yaml
-│   ├── cn-direct.yaml
-│   ├── github.yaml
-│   ├── lancidr.yaml
-│   └── web3.yaml
+│   ├── ai-offshore.yaml        # 仅保留自维护：AI 长尾（头部走第三方）
+│   ├── web3.yaml               # 仅保留自维护：Web3（第三方无合集）
+│   └── README.md               # 规则集来源策略与维护说明
 ├── workers/
 │   └── src/
 │       ├── worker.js           # Worker 源码（鉴权 / 主配置 / 订阅中转）
