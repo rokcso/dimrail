@@ -77,6 +77,8 @@ function serveConfig(url, env) {
       'Cache-Control': 'private, no-store',
       'ETag': `W/"${fnv1a(body)}"`,
       'X-Config-Type': 'clash',
+      // 客户端按此间隔自动重新拉取主订阅（与 proxy-provider interval 保持一致）
+      'Profile-Update-Interval': '10800',
     },
   });
 }
@@ -164,12 +166,19 @@ async function relayProvider(name, env) {
   const contentType = stripped
     ? 'text/yaml; charset=utf-8'
     : upstream.headers.get('content-type') || 'text/yaml; charset=utf-8';
+  const headers = {
+    'Content-Type': contentType,
+    'Cache-Control': 'private, no-store',
+  };
+  // 透传机场订阅信息头：FlClash/Clash 依赖 subscription-userinfo 展示流量用量与到期时间，
+  // content-disposition 携带订阅文件名（部分客户端用于显示订阅名）。
+  for (const h of ['subscription-userinfo', 'profile-update-interval', 'content-disposition']) {
+    const v = upstream.headers.get(h);
+    if (v) headers[h] = v;
+  }
   return new Response(payload, {
     status: 200,
-    headers: {
-      'Content-Type': contentType,
-      'Cache-Control': 'private, no-store',
-    },
+    headers,
   });
 }
 
