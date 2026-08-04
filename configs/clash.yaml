@@ -41,6 +41,10 @@ global-client-fingerprint: chrome
 # Skip certificate verification for proxy servers
 skip-cert-verify: false
 
+# Keep manual proxy-group choices after the client reloads this subscription.
+profile:
+  store-selected: true
+
 # ========== TUN Mode ==========
 # TUN 由 FlClash 客户端开关管理，模板不设置（需要时在 App 内开启）：
 # tun:
