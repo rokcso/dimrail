@@ -277,7 +277,6 @@ proxy-groups:
   - name: 默认线路
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Proxy.png
     type: select
-    use: [ProxyProviderA]
     proxies:
       - 自动选择
       - HK 香港
@@ -290,7 +289,6 @@ proxy-groups:
   - name: AI Service
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/AI.png
     type: select
-    use: [ProxyProviderA]
     proxies:
       - US 美国
       - SG 新加坡
@@ -301,7 +299,6 @@ proxy-groups:
   - name: 流媒体
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Media.png
     type: select
-    use: [ProxyProviderA]
     proxies:
       - 流媒体专用
       - HK 香港
