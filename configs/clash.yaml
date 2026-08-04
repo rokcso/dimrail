@@ -295,6 +295,7 @@ proxy-groups:
       - JP 日本
       - HK 香港
       - 其他地区
+      - 默认线路
 
   - name: 流媒体
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Media.png
@@ -306,6 +307,7 @@ proxy-groups:
       - JP 日本
       - US 美国
       - 其他地区
+      - 默认线路
 
   # ========== Region-based Groups ==========
   - name: HK 香港
