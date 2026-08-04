@@ -97,6 +97,8 @@ async function serveHome(url, env) {
     '',
     '说明：',
     '  - 根路径打开本页；下载配置需带 ?client=clash 或 ?client=shadowrocket',
+    '  - client=clash → Clash 系（FlClash/ClashX/Stash 等 Clash 内核客户端）',
+    '  - client=shadowrocket → Surge 风格系（Shadowrocket 已实测；Surge/Loon 等可尝试）',
     '  - token 即访问密钥，请妥善保管，勿公开分享',
     '  - 流量/到期信息随订阅响应头下发，客户端会自动展示',
     '',

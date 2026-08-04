@@ -186,6 +186,10 @@ npm run deploy
 5. 无需在首页添加 Subscribe 订阅——配置内已内联全部节点（113+）、策略组与规则
 
 > 两个地址返回同一批聚合节点，但格式不同：`client=clash` 是 Clash YAML，`client=shadowrocket` 是 Surge 风格配置。
+>
+> **兼容范围说明**：
+> - `client=clash` → **Clash 系**：所有 Clash 内核客户端（FlClash / ClashX / Clash Verge / Stash 等）
+> - `client=shadowrocket` → **Surge 风格系**：配置按 Surge 语法编写，**Shadowrocket 已实测可用**；Surge / Loon 等兼容 Surge 语法的客户端可尝试导入（字段按 Shadowrocket 兼容子集编写，个别客户端可能存在参数差异）
 
 ## 日常使用
 
