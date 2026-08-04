@@ -283,9 +283,7 @@ proxy-groups:
       - HK 香港
       - SG 新加坡
       - JP 日本
-      - TW 台湾
       - US 美国
-      - UK 英国
       - 其他线路
       - DIRECT
 
@@ -295,11 +293,9 @@ proxy-groups:
     use: [ProxyProviderA]
     proxies:
       - US 美国
-      - UK 英国
       - SG 新加坡
       - JP 日本
       - HK 香港
-      - TW 台湾
       - 其他线路
 
   - name: 流媒体
@@ -310,10 +306,8 @@ proxy-groups:
       - 流媒体专用
       - HK 香港
       - SG 新加坡
-      - TW 台湾
       - JP 日本
       - US 美国
-      - UK 英国
       - 其他线路
 
   # ========== Region-based Groups ==========
@@ -368,23 +362,6 @@ proxy-groups:
     use: [ProxyProviderA]
     filter: "(?i)(日本|🇯🇵|东京|大阪|JP|Japan|Tokyo|Osaka)"
 
-  - name: TW 台湾
-    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Taiwan.png
-    type: select
-    use: [ProxyProviderA]
-    filter: "(?i)(台湾|🇹🇼|TW|Taiwan|台-|台_|Taipei|TPE)"
-    proxies:
-      - TW-Auto
-  - name: TW-Auto
-    hidden: true
-    type: url-test
-    interval: 600
-    timeout: 5000
-    lazy: true
-    tolerance: 100
-    use: [ProxyProviderA]
-    filter: "(?i)(台湾|🇹🇼|TW|Taiwan|台-|台_|Taipei|TPE)"
-
   - name: US 美国
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/United_States.png
     type: select
@@ -401,23 +378,6 @@ proxy-groups:
     tolerance: 100
     use: [ProxyProviderA]
     filter: "(?i)(美国|🇺🇸|US|USA|United States|America|Los Angeles|New York|San Francisco|Seattle|Chicago|美西|美东|西部|东部)"
-
-  - name: UK 英国
-    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/United_Kingdom.png
-    type: select
-    use: [ProxyProviderA]
-    filter: "(?i)(英国|🇬🇧|UK|United Kingdom|Britain|伦敦|London|Manchester|Birmingham)"
-    proxies:
-      - UK-Auto
-  - name: UK-Auto
-    hidden: true
-    type: url-test
-    interval: 600
-    timeout: 5000
-    lazy: true
-    tolerance: 100
-    use: [ProxyProviderA]
-    filter: "(?i)(英国|🇬🇧|UK|United Kingdom|Britain|伦敦|London|Manchester|Birmingham)"
 
   - name: 流媒体专用
     hidden: true
