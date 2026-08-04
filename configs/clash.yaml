@@ -284,7 +284,7 @@ proxy-groups:
       - SG 新加坡
       - JP 日本
       - US 美国
-      - 其他线路
+      - 其他地区
       - DIRECT
 
   - name: AI Service
@@ -296,7 +296,7 @@ proxy-groups:
       - SG 新加坡
       - JP 日本
       - HK 香港
-      - 其他线路
+      - 其他地区
 
   - name: 流媒体
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Media.png
@@ -308,7 +308,7 @@ proxy-groups:
       - SG 新加坡
       - JP 日本
       - US 美国
-      - 其他线路
+      - 其他地区
 
   # ========== Region-based Groups ==========
   - name: HK 香港
@@ -389,7 +389,7 @@ proxy-groups:
     use: [ProxyProviderA]
     filter: "(?i)(IPLC|IEPL|专线|游戏|Game|Media|流媒体|Netflix|Disney|HBO|Prime|Video|NF|原生|Native|解锁|Unlock|Premium|Elite|Pro)"
 
-  - name: 其他线路
+  - name: 其他地区
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/World_Map.png
     type: select
     use: [ProxyProviderA]
