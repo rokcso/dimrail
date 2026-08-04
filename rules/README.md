@@ -12,7 +12,7 @@
 | --- | --- | --- | --- |
 | [Loyalsoldier/clash-rules](https://github.com/Loyalsoldier/clash-rules) | `direct`（国内直连补充）、`lancidr`（局域网/保留 IP） | 约每日 | Clash 生态标准规则集，约 27.9k stars；文件为 YAML payload 格式（`+.` 前缀表示后缀匹配） |
 | [MetaCubeX/meta-rules-dat](https://github.com/MetaCubeX/meta-rules-dat) | `apple-cn`、`apple`、`github`、`openai`、`anthropic`、`telegram`（+ `telegram-cidr` IP 段）、`spotify`、`youtube`、`netflix`、`disney`、`primevideo`、`hbo` | 每日 | 基于 v2fly domain-list-community，每日更新；文件为纯文本 list（`format: text`），`+.` 前缀=后缀匹配 |
-| 自维护（本目录） | `ai-offshore.yaml`（AI 长尾）、`web3.yaml` | 手动 | 第三方没有对应的合并规则集时才保留自维护 |
+| 自维护（本目录） | `ai-offshore.yaml`（AI 长尾） | 手动 | 第三方没有对应的合并规则集时才保留自维护 |
 
 **不采用 blackmatrix7/ios_rule_script 的原因**：其文件按单个厂商拆分（OpenAI、Claude、Gemini、Copilot…），且含 `DOMAIN-KEYWORD`/`IP-CIDR` 混合条目（须用 `behavior: classical`），逐个引入会使配置碎片化；我们需要的分类（Apple/GitHub/AI 头部/流媒体）meta-rules-dat 已覆盖。若未来需要单独路由某个厂商（如仅将 OpenAI 走某线路），可再单独引入。
 
@@ -26,7 +26,7 @@
 | apple-offshore.yaml | 已删除 | meta-rules-dat `apple.list`（`apple-cn` 规则在前，直连优先） |
 | github.yaml | 已删除 | meta-rules-dat `github.list` |
 | ai-offshore.yaml | 裁剪 | OpenAI/Claude 头部 → meta-rules-dat `openai.list` / `anthropic.list`；长尾保留自维护 |
-| web3.yaml | 保留 | 第三方无 Web3 合并合集（blackmatrix7 仅个别交易所） |
+| ~~web3.yaml~~ | 已删除 | Web3 流量回归默认线路，无需独立规则集 |
 
 ## 规则集维护最佳实践
 
@@ -81,4 +81,4 @@ rules:
 ## 自维护文件清单
 
 - `ai-offshore.yaml` — AI 长尾厂商（Gemini、Copilot、Perplexity、Grok、Midjourney、HuggingFace 等）。OpenAI/ChatGPT 与 Claude/Anthropic 已由第三方覆盖，改动前先确认对应第三方 list 是否已包含。
-- `web3.yaml` — CEX/钱包/DeFi/NFT/浏览器/RPC/跨链桥等 Web3 生态。第三方暂无合并合集。
+- （已删除）原 web3.yaml — Web3 流量回归默认线路后不再需要独立规则集。

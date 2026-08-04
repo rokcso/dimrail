@@ -301,35 +301,6 @@ proxy-groups:
       - HK 香港
       - TW 台湾
       - 其他线路
-      - 手动选择
-
-  - name: Apple
-    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Apple.png
-    type: select
-    use: [ProxyProviderA]
-    proxies:
-      - HK 香港
-      - US 美国
-      - SG 新加坡
-      - JP 日本
-      - TW 台湾
-      - UK 英国
-      - 其他线路
-      - 手动选择
-
-  - name: Telegram
-    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Telegram.png
-    type: select
-    use: [ProxyProviderA]
-    proxies:
-      - SG 新加坡
-      - HK 香港
-      - JP 日本
-      - TW 台湾
-      - US 美国
-      - UK 英国
-      - 其他线路
-      - 手动选择
 
   - name: 流媒体
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Media.png
@@ -344,37 +315,6 @@ proxy-groups:
       - US 美国
       - UK 英国
       - 其他线路
-      - 手动选择
-
-  - name: GitHub
-    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/GitHub.png
-    type: select
-    use: [ProxyProviderA]
-    proxies:
-      - HK 香港
-      - SG 新加坡
-      - JP 日本
-      - TW 台湾
-      - US 美国
-      - UK 英国
-      - 其他线路
-      - 手动选择
-      - DIRECT
-
-  - name: Web3
-    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Cryptocurrency.png
-    type: select
-    use: [ProxyProviderA]
-    proxies:
-      - US 美国
-      - SG 新加坡
-      - HK 香港
-      - JP 日本
-      - UK 英国
-      - TW 台湾
-      - 其他线路
-      - 手动选择
-      - DIRECT
 
   # ========== Region-based Groups ==========
   - name: HK 香港
@@ -508,18 +448,13 @@ proxy-groups:
 
   # ========== Auto-select Groups ==========
   - name: 自动选择
+    hidden: true
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Auto.png
     type: url-test
     interval: 600
     timeout: 5000
     lazy: true
     tolerance: 100
-    use: [ProxyProviderA]
-    filter: "^(?!.*(?:群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|\\.com\\b|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
-
-  - name: 手动选择
-    icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Static.png
-    type: select
     use: [ProxyProviderA]
     filter: "^(?!.*(?:群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|\\.com\\b|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
 
@@ -552,20 +487,6 @@ rule-providers:
     url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/apple-cn.list
     path: ./rules/apple-cn.list
     interval: 86400
-  apple:
-    type: http
-    behavior: domain
-    format: text
-    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/apple.list
-    path: ./rules/apple.list
-    interval: 86400
-  github:
-    type: http
-    behavior: domain
-    format: text
-    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/github.list
-    path: ./rules/github.list
-    interval: 86400
   openai:
     type: http
     behavior: domain
@@ -579,20 +500,6 @@ rule-providers:
     format: text
     url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/anthropic.list
     path: ./rules/anthropic.list
-    interval: 86400
-  telegram:
-    type: http
-    behavior: domain
-    format: text
-    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/telegram.list
-    path: ./rules/telegram.list
-    interval: 86400
-  telegram-cidr:
-    type: http
-    behavior: ipcidr
-    format: text
-    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geoip/telegram.list
-    path: ./rules/telegram-cidr.list
     interval: 86400
   spotify:
     type: http
@@ -645,13 +552,6 @@ rule-providers:
     url: https://fastly.jsdelivr.net/gh/rokcso/dimrail@main/rules/ai-offshore.yaml
     path: ./rules/ai-offshore.yaml
     interval: 604800
-  web3:
-    type: http
-    behavior: domain
-    format: yaml
-    url: https://fastly.jsdelivr.net/gh/rokcso/dimrail@main/rules/web3.yaml
-    path: ./rules/web3.yaml
-    interval: 604800
 
 # ========== Rules ==========
 # 注意：特定域名规则放在前面，通用规则放在后面
@@ -669,11 +569,6 @@ rules:
   - RULE-SET,anthropic,AI Service
   - RULE-SET,ai-offshore,AI Service # 长尾 AI（第三方无合集）
   - RULE-SET,apple-cn,DIRECT # Apple 中国直连（须在 apple 之前）
-  - RULE-SET,apple,Apple
-  - RULE-SET,github,GitHub
-  - RULE-SET,web3,Web3
-  - RULE-SET,telegram,Telegram
-  - RULE-SET,telegram-cidr,Telegram
   - RULE-SET,spotify,流媒体
   - RULE-SET,youtube,流媒体
   - RULE-SET,netflix,流媒体
