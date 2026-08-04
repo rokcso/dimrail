@@ -393,7 +393,7 @@ proxy-groups:
     icon: https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/World_Map.png
     type: select
     use: [ProxyProviderA]
-    filter: "(?i)^(?!.*(?:🇭🇰|香港|HK|HKG|Hong Kong|🇲🇴|澳门|Macau|Macao|🇹🇼|台湾|臺灣|TW|Taiwan|Taipei|TPE|🇯🇵|日本|JP|Japan|Tokyo|Osaka|🇺🇸|美国|US|USA|United States|America|Los Angeles|New York|San Francisco|Seattle|Chicago|美西|美东|西部|东部|🇸🇬|新加坡|SG|Singapore|狮城|坡|🇨🇳|中国|CN|China|🇬🇧|英国|UK|United Kingdom|Britain|London|Manchester|Birmingham|\\.com\\b|群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
+    filter: "(?i)^(?!.*(?:🇭🇰|香港|HK|HKG|Hong Kong|🇲🇴|澳门|Macau|Macao|🇯🇵|日本|JP|Japan|Tokyo|Osaka|🇺🇸|美国|US|USA|United States|America|Los Angeles|New York|San Francisco|Seattle|Chicago|美西|美东|西部|东部|🇸🇬|新加坡|SG|Singapore|狮城|坡|🇨🇳|中国|CN|China|\\.com\\b|群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
     proxies:
       - 其他-Auto
   - name: 其他-Auto
@@ -404,7 +404,7 @@ proxy-groups:
     lazy: true
     tolerance: 100
     use: [ProxyProviderA]
-    filter: "(?i)^(?!.*(?:🇭🇰|香港|HK|HKG|Hong Kong|🇲🇴|澳门|Macau|Macao|🇹🇼|台湾|臺灣|TW|Taiwan|Taipei|TPE|🇯🇵|日本|JP|Japan|Tokyo|Osaka|🇺🇸|美国|US|USA|United States|America|Los Angeles|New York|San Francisco|Seattle|Chicago|美西|美东|西部|东部|🇸🇬|新加坡|SG|Singapore|狮城|坡|🇨🇳|中国|CN|China|🇬🇧|英国|UK|United Kingdom|Britain|London|Manchester|Birmingham|\\.com\\b|群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
+    filter: "(?i)^(?!.*(?:🇭🇰|香港|HK|HKG|Hong Kong|🇲🇴|澳门|Macau|Macao|🇯🇵|日本|JP|Japan|Tokyo|Osaka|🇺🇸|美国|US|USA|United States|America|Los Angeles|New York|San Francisco|Seattle|Chicago|美西|美东|西部|东部|🇸🇬|新加坡|SG|Singapore|狮城|坡|🇨🇳|中国|CN|China|\\.com\\b|群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|(?:\\b(?:USE|USED|TOTAL|Traffic|Expire|EMAIL|Panel|Channel|Author)\\b)|(?:\\d{4}-\\d{2}-\\d{2}|\\d+G))).*$"
 
   # ========== Auto-select Groups ==========
   - name: 自动选择
