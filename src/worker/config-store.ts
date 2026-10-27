@@ -61,6 +61,7 @@ interface ConfigRow {
   name: string;
   yaml: string;
   token: string;
+  group_id: string | null;
   created_at: number;
   updated_at: number;
 }
@@ -71,6 +72,7 @@ function toRecord(row: ConfigRow): ConfigRecord {
     name: row.name,
     yaml: row.yaml,
     token: row.token,
+    groupId: row.group_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -79,7 +81,7 @@ function toRecord(row: ConfigRow): ConfigRecord {
 export async function listConfigs(env: Bindings): Promise<ConfigSummary[]> {
   const { results } = await requireDb(env)
     .prepare(
-      'SELECT id, name, token, created_at, updated_at FROM configs ORDER BY created_at ASC, id ASC',
+      'SELECT id, name, token, group_id, created_at, updated_at FROM configs ORDER BY created_at ASC, id ASC',
     )
     .all<Omit<ConfigRow, 'yaml'>>();
 
@@ -87,6 +89,7 @@ export async function listConfigs(env: Bindings): Promise<ConfigSummary[]> {
     id: row.id,
     name: row.name,
     token: row.token,
+    groupId: row.group_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }));
@@ -94,7 +97,9 @@ export async function listConfigs(env: Bindings): Promise<ConfigSummary[]> {
 
 export async function getConfig(env: Bindings, id: string): Promise<ConfigRecord | null> {
   const row = await requireDb(env)
-    .prepare('SELECT id, name, yaml, token, created_at, updated_at FROM configs WHERE id = ?')
+    .prepare(
+      'SELECT id, name, yaml, token, group_id, created_at, updated_at FROM configs WHERE id = ?',
+    )
     .bind(id)
     .first<ConfigRow>();
 
@@ -128,7 +133,15 @@ export async function createConfig(env: Bindings, name?: string): Promise<Config
       .bind(id, finalName, base.yaml, token, now, now)
       .run();
 
-    return { id, name: finalName, yaml: base.yaml, token, createdAt: now, updatedAt: now };
+    return {
+      id,
+      name: finalName,
+      yaml: base.yaml,
+      token,
+      groupId: null,
+      createdAt: now,
+      updatedAt: now,
+    };
   }
 
   throw new Error('生成配置 ID 失败，请重试');
@@ -137,15 +150,16 @@ export async function createConfig(env: Bindings, name?: string): Promise<Config
 export async function updateConfig(
   env: Bindings,
   id: string,
-  patch: { yaml?: string; name?: string },
+  patch: { yaml?: string; name?: string; groupId?: string | null },
 ): Promise<{ updatedAt: number } | null> {
   const current = await getConfig(env, id);
   if (!current) return null;
 
   const updatedAt = Date.now();
+  const groupId = patch.groupId === undefined ? current.groupId : patch.groupId;
   await requireDb(env)
-    .prepare('UPDATE configs SET yaml = ?, name = ?, updated_at = ? WHERE id = ?')
-    .bind(patch.yaml ?? current.yaml, patch.name?.trim() || current.name, updatedAt, id)
+    .prepare('UPDATE configs SET yaml = ?, name = ?, group_id = ?, updated_at = ? WHERE id = ?')
+    .bind(patch.yaml ?? current.yaml, patch.name?.trim() || current.name, groupId, updatedAt, id)
     .run();
 
   return { updatedAt };
@@ -163,6 +177,15 @@ export async function regenerateToken(env: Bindings, id: string): Promise<string
     .bind(token, id)
     .run();
   return (result.meta.changes ?? 0) > 0 ? token : null;
+}
+
+/** 删除节点组前检查：有多少份配置正拿它当节点来源。 */
+export async function countConfigsUsingGroup(env: Bindings, groupId: string): Promise<number> {
+  const row = await requireDb(env)
+    .prepare('SELECT COUNT(*) AS n FROM configs WHERE group_id = ?')
+    .bind(groupId)
+    .first<{ n: number }>();
+  return row?.n ?? 0;
 }
 
 /** 订阅侧鉴权：这个 token 是否属于某一份配置。 */

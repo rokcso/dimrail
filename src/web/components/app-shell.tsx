@@ -1,55 +1,97 @@
-import { RiFileListLine, RiServerLine, RiSettings3Line } from '@remixicon/react';
+import { RiFileListLine, RiServerLine, RiSettings3Line, RiStackLine } from '@remixicon/react';
 import type { ReactNode } from 'react';
 import { cn } from '@/web/lib/utils';
 
-const TABS = [
-  { to: '/admin', label: '配置', icon: RiFileListLine },
-  { to: '/admin/airports', label: '机场', icon: RiServerLine },
-  { to: '/admin/settings', label: '设置', icon: RiSettings3Line },
+const MAIN_TABS = [
+  { to: '/admin', label: '配置', icon: RiFileListLine, exact: true },
+  { to: '/admin/airports', label: '机场', icon: RiServerLine, exact: false },
+  { to: '/admin/groups', label: '节点组', icon: RiStackLine, exact: false },
 ];
+
+const SETTINGS_TAB = {
+  to: '/admin/settings',
+  label: '设置',
+  icon: RiSettings3Line,
+  exact: false,
+};
 
 interface AppShellProps {
   path: string;
   onNavigate: (to: string) => void;
-  /** 导航下面的侧栏内容（配置列表）。 */
+  /** 列表栏内容。三栏布局里它独占第二栏。 */
   sidebar?: ReactNode;
   children: ReactNode;
 }
 
-/** 应用外壳：左侧固定导航栏，右侧单一内容区。页面只往右侧填内容。 */
+function isActive(path: string, to: string, exact: boolean): boolean {
+  return path === to || (!exact && path.startsWith(`${to}/`));
+}
+
+/** 应用外壳：全局导航（栏 1）+ 列表（栏 2）+ 内容（栏 3）。 */
 export function AppShell({ path, onNavigate, sidebar, children }: AppShellProps) {
   return (
     <div className="flex h-full">
-      <aside className="flex w-56 shrink-0 flex-col border-r-[0.5px] border-border bg-surface">
-        <div className="flex h-14 shrink-0 items-center gap-2 px-4">
-          <img src="/favicon.svg" alt="" className="size-4" />
-          <span className="text-[13px] font-semibold tracking-tight">Dimrail</span>
+      <aside className="flex w-16 shrink-0 flex-col border-r-[0.5px] border-border bg-surface">
+        <div className="flex h-12 shrink-0 items-center justify-center">
+          <img src="/favicon.svg" alt="Dimrail" title="Dimrail" className="size-5" />
         </div>
 
-        <nav className="flex shrink-0 flex-col gap-px px-2">
-          {TABS.map(({ to, label, icon: Icon }) => (
-            <button
-              key={to}
-              type="button"
-              onClick={() => onNavigate(to)}
-              className={cn(
-                'flex h-7 items-center gap-2 rounded-control px-2 text-[13px] outline-none transition-colors duration-150 ease-out',
-                'focus-visible:ring-2 focus-visible:ring-ring/40',
-                path === to
-                  ? 'bg-muted font-medium text-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-              )}
-            >
-              <Icon className="size-3.5 shrink-0" />
-              {label}
-            </button>
+        <nav className="flex flex-col gap-1 px-2" aria-label="主导航">
+          {MAIN_TABS.map((tab) => (
+            <NavItem
+              key={tab.to}
+              {...tab}
+              active={isActive(path, tab.to, tab.exact)}
+              onNavigate={onNavigate}
+            />
           ))}
         </nav>
 
-        {sidebar && <div className="mt-5 flex min-h-0 flex-1 flex-col">{sidebar}</div>}
+        <div className="mt-auto px-2 pb-3">
+          <NavItem
+            {...SETTINGS_TAB}
+            active={isActive(path, SETTINGS_TAB.to, SETTINGS_TAB.exact)}
+            onNavigate={onNavigate}
+          />
+        </div>
       </aside>
+
+      {sidebar && (
+        <aside className="flex w-60 shrink-0 flex-col border-r-[0.5px] border-border bg-background max-lg:w-52">
+          {sidebar}
+        </aside>
+      )}
 
       <main className="flex min-w-0 flex-1 flex-col bg-background">{children}</main>
     </div>
+  );
+}
+
+interface NavItemProps {
+  to: string;
+  label: string;
+  icon: typeof RiFileListLine;
+  active: boolean;
+  onNavigate: (to: string) => void;
+}
+
+function NavItem({ to, label, icon: Icon, active, onNavigate }: NavItemProps) {
+  return (
+    <button
+      type="button"
+      onClick={() => onNavigate(to)}
+      aria-current={active ? 'page' : undefined}
+      title={label}
+      className={cn(
+        'flex h-12 w-full flex-col items-center justify-center gap-1 rounded-control outline-none transition-colors duration-150 ease-out',
+        'focus-visible:ring-2 focus-visible:ring-ring/40',
+        active
+          ? 'bg-muted text-foreground'
+          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+      )}
+    >
+      <Icon className={cn('size-[18px] shrink-0', active && 'text-primary')} />
+      <span className="text-[10px] leading-none">{label}</span>
+    </button>
   );
 }

@@ -8,8 +8,13 @@ import {
   type ConfigListResponse,
   configCreateSchema,
   configUpdateSchema,
+  type NodeGroupDetail,
+  type NodeGroupListResponse,
   type NodesResponse,
   type NodeView,
+  nodeGroupCreateSchema,
+  nodeGroupMembersPayloadSchema,
+  nodeGroupUpdateSchema,
   type OverviewResponse,
   type RefreshResponse,
   type SaveResponse,
@@ -35,6 +40,7 @@ import { checkAdmin, timingSafeEqual } from './auth';
 import {
   type ConfigRecord,
   countConfigs,
+  countConfigsUsingGroup,
   createConfig,
   deleteConfig,
   getConfig,
@@ -47,7 +53,25 @@ import {
   updateConfig,
 } from './config-store';
 import type { Bindings } from './env';
-import { aggregatedUserinfo, buildProvidersYaml, providerNames, relayProvider } from './provider';
+import {
+  countGroups,
+  createGroup,
+  deleteGroup,
+  getGroup,
+  getGroupSummary,
+  nameTaken as groupNameTaken,
+  listGroups,
+  renameGroup,
+  setGroupMembers,
+} from './group-store';
+import {
+  aggregatedUserinfo,
+  buildProvidersYaml,
+  type ProviderSource,
+  providerNames,
+  relayGroup,
+  relayProvider,
+} from './provider';
 import { parseRoute } from './routes';
 import { fetchSubscription } from './subscription';
 import { validateConfig } from './validate';
@@ -55,6 +79,7 @@ import { validateConfig } from './validate';
 const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8' };
 const CONFIG_ID = /^\/api\/configs\/([A-Za-z0-9_-]{1,32})(\/token)?$/;
 const AIRPORT_ID = /^\/api\/airports\/([A-Za-z0-9_-]{1,32})(\/refresh)?$/;
+const GROUP_ID = /^\/api\/groups\/([A-Za-z0-9_-]{1,32})(\/nodes)?$/;
 
 export default {
   async fetch(request: Request, env: Bindings): Promise<Response> {
@@ -68,6 +93,8 @@ export default {
         return serveConfig(request, env, url, route.id);
       case 'provider':
         return handleProvider(env, url, route.id);
+      case 'group':
+        return handleGroup(env, url, route.id);
       case 'root':
         return redirect('/admin');
       case 'notFound':
@@ -90,27 +117,40 @@ async function serveConfig(
   if (!token) return text('缺少订阅密钥：链接需要带 ?token=', 401);
 
   let record: ConfigRecord | null;
-  let refs: Awaited<ReturnType<typeof listProviderRefs>>;
+  let sources: ProviderSource[];
+  let sourceLabel: string;
   try {
     record = await getConfig(env, id);
     if (!record) return text('配置不存在', 404);
     if (!timingSafeEqual(token, record.token)) return text('订阅链接无效', 401);
-    refs = await listProviderRefs(env);
+
+    // 节点来源二选一：指定的节点组，或全部启用机场。
+    if (record.groupId) {
+      const group = await getGroupSummary(env, record.groupId);
+      if (!group) {
+        return text('这份配置使用的节点组已不存在：到 /admin/groups 重新选择节点来源', 503);
+      }
+      sources = [{ id: group.id, name: group.name, kind: 'group' }];
+      sourceLabel = `节点组: ${group.name}`;
+    } else {
+      const refs = await listProviderRefs(env);
+      if (refs.length === 0) {
+        return text('还没有可用的机场：先到 /admin/airports 添加订阅链接', 503);
+      }
+      sources = refs.map((ref) => ({ ...ref, kind: 'airport' as const }));
+      sourceLabel = `机场: ${refs.map((ref) => ref.name).join(', ')}`;
+    }
   } catch (err) {
     return text(`读取配置失败：${errorMessage(err)}`, 500);
-  }
-
-  if (refs.length === 0) {
-    return text('还没有可用的机场：先到 /admin/airports 添加订阅链接', 503);
   }
 
   const body = [
     '# Dimrail',
     `# 配置: ${record.name}`,
-    `# 机场: ${refs.map((ref) => ref.name).join(', ')}`,
+    `# ${sourceLabel}`,
     record.yaml
-      .replaceAll('  # __PROXY_PROVIDERS__', buildProvidersYaml(refs, url.origin, record.token))
-      .replaceAll('__PROVIDER_NAMES__', providerNames(refs)),
+      .replaceAll('  # __PROXY_PROVIDERS__', buildProvidersYaml(sources, url.origin, record.token))
+      .replaceAll('__PROVIDER_NAMES__', providerNames(sources)),
   ].join('\n');
 
   const headers: Record<string, string> = {
@@ -132,18 +172,28 @@ async function serveConfig(
 }
 
 async function handleProvider(env: Bindings, url: URL, id: string): Promise<Response> {
+  const denied = await checkSubscriptionToken(env, url);
+  if (denied) return denied;
+  return relayProvider(env, id);
+}
+
+async function handleGroup(env: Bindings, url: URL, id: string): Promise<Response> {
+  const denied = await checkSubscriptionToken(env, url);
+  if (denied) return denied;
+  return relayGroup(env, id);
+}
+
+/** /providers 与 /groups 共用：token 属于任意一份配置即可读。 */
+async function checkSubscriptionToken(env: Bindings, url: URL): Promise<Response | null> {
   const token = url.searchParams.get('token') ?? '';
   if (!token) return text('缺少订阅密钥', 401);
 
-  let valid: boolean;
   try {
-    valid = await tokenExists(env, token);
+    if (await tokenExists(env, token)) return null;
   } catch (err) {
     return text(`校验失败：${errorMessage(err)}`, 500);
   }
-  if (!valid) return text('订阅链接无效', 401);
-
-  return relayProvider(env, id);
+  return text('订阅链接无效', 401);
 }
 
 /* ---------------- 管理 API ---------------- */
@@ -179,17 +229,19 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
   if (path === '/api/overview') {
     if (method !== 'GET') return methodNotAllowed();
     const base = await loadBase(env);
-    const [airportCount, nodeCount, failed, configCount] = await Promise.all([
+    const [airportCount, nodeCount, failed, configCount, groupCount] = await Promise.all([
       countAirports(env),
       countNodes(env),
       countFailed(env),
       countConfigs(env),
+      countGroups(env),
     ]);
     return json({
       airports: { count: airportCount, nodeCount, failed },
       adminTokenConfigured: Boolean(env.ADMIN_TOKEN?.trim()),
       base: { seeded: base.seeded, updatedAt: base.updatedAt },
       configCount,
+      groupCount,
     } satisfies OverviewResponse);
   }
 
@@ -229,6 +281,21 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
       const payload = configCreateSchema.safeParse((await readJson(request)) ?? {});
       if (!payload.success) return json({ error: '请求格式错误' }, 400);
       return json(await createConfig(env, payload.data.name), 201);
+    }
+    return methodNotAllowed();
+  }
+
+  if (path === '/api/groups') {
+    if (method === 'GET') {
+      return json({ groups: await listGroups(env) } satisfies NodeGroupListResponse);
+    }
+    if (method === 'POST') {
+      const payload = nodeGroupCreateSchema.safeParse(await readJson(request));
+      if (!payload.success) return json({ error: firstIssue(payload.error) }, 400);
+      if (await groupNameTaken(env, payload.data.name)) {
+        return json({ error: `已经有一个叫「${payload.data.name}」的节点组` }, 409);
+      }
+      return json(await createGroup(env, payload.data.name), 201);
     }
     return methodNotAllowed();
   }
@@ -321,6 +388,49 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
     return methodNotAllowed();
   }
 
+  const groupMatch = GROUP_ID.exec(path);
+  const groupId = groupMatch?.[1];
+  if (groupId) {
+    if (groupMatch[2]) {
+      if (method !== 'PUT') return methodNotAllowed();
+      const payload = nodeGroupMembersPayloadSchema.safeParse(await readJson(request));
+      if (!payload.success) return json({ error: firstIssue(payload.error) }, 400);
+      if (!(await getGroupSummary(env, groupId))) return json({ error: '节点组不存在' }, 404);
+
+      const nodeCount = await setGroupMembers(env, groupId, payload.data.members);
+      return json({ ok: true, nodeCount });
+    }
+
+    if (method === 'GET') {
+      const group = await getGroup(env, groupId);
+      if (!group) return json({ error: '节点组不存在' }, 404);
+      return json(group satisfies NodeGroupDetail);
+    }
+
+    if (method === 'PATCH') {
+      const payload = nodeGroupUpdateSchema.safeParse(await readJson(request));
+      if (!payload.success) return json({ error: firstIssue(payload.error) }, 400);
+      if (await groupNameTaken(env, payload.data.name, groupId)) {
+        return json({ error: `已经有一个叫「${payload.data.name}」的节点组` }, 409);
+      }
+
+      const updated = await renameGroup(env, groupId, payload.data.name);
+      if (!updated) return json({ error: '节点组不存在' }, 404);
+      return json(updated);
+    }
+
+    if (method === 'DELETE') {
+      const inUse = await countConfigsUsingGroup(env, groupId);
+      if (inUse > 0) {
+        return json({ error: `有 ${inUse} 份配置正在使用这个节点组，先改掉它们的节点来源` }, 409);
+      }
+      if (!(await deleteGroup(env, groupId))) return json({ error: '节点组不存在' }, 404);
+      return json({ ok: true });
+    }
+
+    return methodNotAllowed();
+  }
+
   const match = CONFIG_ID.exec(path);
   const id = match?.[1];
   if (!id) return json({ error: 'Not found' }, 404);
@@ -347,6 +457,9 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
       const result = validateConfig(payload.data.yaml);
       if (!result.ok) return json({ error: result.error }, 400);
       notices = result.notices;
+    }
+    if (payload.data.groupId && !(await getGroupSummary(env, payload.data.groupId))) {
+      return json({ error: '节点组不存在' }, 400);
     }
 
     const updated = await updateConfig(env, id, payload.data);

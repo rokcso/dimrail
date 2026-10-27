@@ -1,5 +1,6 @@
 import type { AirportSummary } from '../shared/schema';
 import type { Bindings } from './env';
+import { removeAirportFromGroups } from './group-store';
 import { generateId } from './ids';
 import { type ProxyNode, toNodeViewFields } from './subscription';
 
@@ -229,6 +230,7 @@ export async function updateAirport(
   const urlChanged = next.url !== row.url;
   if (urlChanged) {
     await db.prepare('DELETE FROM airport_nodes WHERE airport_id = ?').bind(id).run();
+    await removeAirportFromGroups(env, id);
   }
   await db
     .prepare(
@@ -254,8 +256,9 @@ export async function updateAirport(
 
 export async function deleteAirport(env: Bindings, id: string): Promise<boolean> {
   const db = requireDb(env);
-  const [, result] = await db.batch([
+  const [, , result] = await db.batch([
     db.prepare('DELETE FROM airport_nodes WHERE airport_id = ?').bind(id),
+    db.prepare('DELETE FROM node_group_nodes WHERE airport_id = ?').bind(id),
     db.prepare('DELETE FROM airports WHERE id = ?').bind(id),
   ]);
   return (result?.meta.changes ?? 0) > 0;

@@ -6,15 +6,20 @@ import { Input } from './components/ui/input';
 import { ApiError, api } from './lib/api';
 import { AirportsPage } from './pages/airports';
 import { ConfigsPage } from './pages/configs';
+import { GroupsPage } from './pages/groups';
 import { SettingsPage } from './pages/settings';
 
 const TOKEN_KEY = 'dimrail-admin-token';
 const SETTINGS_PATH = '/admin/settings';
 const AIRPORTS_PATH = '/admin/airports';
+const GROUPS_PATH = '/admin/groups';
 
 function normalizePath(pathname: string): string {
-  if (pathname === SETTINGS_PATH) return SETTINGS_PATH;
-  if (pathname === AIRPORTS_PATH) return AIRPORTS_PATH;
+  const path = pathname.replace(/\/+$/, '') || '/';
+  // 设置页的所有分组都留在 /admin/settings 一个地址里，旧链接不会失效。
+  if (path === SETTINGS_PATH || path.startsWith(`${SETTINGS_PATH}/`)) return SETTINGS_PATH;
+  if (path === AIRPORTS_PATH) return AIRPORTS_PATH;
+  if (path === GROUPS_PATH) return GROUPS_PATH;
   return '/admin';
 }
 
@@ -53,6 +58,7 @@ export function App() {
   const props = { token, path, onNavigate: navigate, onReject: reject };
   if (path === SETTINGS_PATH) return <SettingsPage {...props} />;
   if (path === AIRPORTS_PATH) return <AirportsPage {...props} />;
+  if (path === GROUPS_PATH) return <GroupsPage {...props} />;
   return <ConfigsPage {...props} />;
 }
 

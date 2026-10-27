@@ -10,8 +10,9 @@
 # Dimrail
 
 个人 Clash 订阅中转：把多个机场聚合成一个 provider 集合，下发自己的分流配置。
+可以从机场节点里手选子集组成节点组，让某份配置只使用这一组节点。
 
-配置和机场订阅都存在 D1，在 `/admin` 里改完立即生效，不需要重新部署。
+配置、机场订阅和节点组都存在 D1，在 `/admin` 里改完立即生效，不需要重新部署。
 
 ## 多份配置
 
@@ -34,23 +35,36 @@
 - 单个订阅超过 2000 个节点会截断并在页面上标出来。
 - 只支持 Clash 格式（`proxies:` 数组），v2ray / base64 订阅会直接报错，不会猜。
 
+## 节点组合
+
+`/admin/groups` 里可以把任意节点（可以跨机场）圈成一个节点组，比如「US 精选」「低倍率」。
+
+- 成员按**机场 + 节点名 + 类型**引用，不复制节点内容。机场刷新换密码后组里自动用新凭据；
+  节点被改名或下架时，该成员会从下发结果里消失，不会把整份订阅带坏。
+- 组里只包含启用机场的节点；停用/删除机场会把它从组里摘掉。
+- 节点组被配置使用时不允许删除，需要先把那些配置改成别的来源。
+- 每份配置在配置页顶部选择节点来源：**全部节点**，或者某个节点组。切换立即生效，
+  不用保存 YAML。
+
 ## 路由
 
 ```
 GET  /admin                       配置列表 + YAML 编辑器（管理口令）
-GET  /admin/settings              基础配置与概览
+GET  /admin/groups                节点组：圈选节点
+GET  /admin/settings              设置：基础配置 / 概览（同一地址内切换）
 
 GET  /p/<id>?token=<token>        Clash 主配置（proxy-providers 由 Worker 注入）
 GET  /providers/<机场 id>?token=   机场订阅中转（D1 缓存，原样回传 proxies）
+GET  /groups/<节点组 id>?token=    节点组中转（按成员读取当前节点）
 
-GET  /api/overview                概览：机场、配置数、基础配置状态
+GET  /api/overview                概览：机场、配置数、节点组数、基础配置状态
 GET  /api/base-config             读取基础配置
 PUT  /api/base-config             保存基础配置
 POST /api/base-config/reset       恢复为出厂模板
 GET  /api/configs                 配置列表
 POST /api/configs                 新建配置（快照当前基础配置）
 GET  /api/configs/<id>            读取一份配置
-PUT  /api/configs/<id>            保存（YAML 和/或名字）
+PUT  /api/configs/<id>            保存（YAML / 名字 / 节点来源 groupId）
 DELETE /api/configs/<id>          删除
 POST /api/configs/<id>/token      重新生成订阅 token
 
@@ -61,6 +75,13 @@ DELETE /api/airports/<id>         删除
 POST /api/airports/<id>/refresh   重新拉取单个机场
 POST /api/airports/refresh        重新拉取所有启用的机场
 GET  /api/nodes                   所有节点（已裁剪，只给展示字段）
+
+GET  /api/groups                  节点组列表
+POST /api/groups                  新建节点组
+GET  /api/groups/<id>             读取节点组（含成员引用）
+PATCH /api/groups/<id>            改名
+DELETE /api/groups/<id>           删除（被配置使用时返回 409）
+PUT  /api/groups/<id>/nodes       整组覆盖成员
 ```
 
 ## 依赖的 Secret
@@ -78,7 +99,7 @@ GET  /api/nodes                   所有节点（已裁剪，只给展示字段�
 ```bash
 pnpm install
 cp .dev.vars.example .dev.vars      # 填 ADMIN_TOKEN
-pnpm db:migrate:local               # 建 base_config / configs / airports 表
+pnpm db:migrate:local               # 建 base_config / configs / airports / node_groups 等表
 pnpm dev
 ```
 
@@ -115,8 +136,9 @@ pnpm deploy
 
 请求订阅时，Worker 读那份配置的 YAML，在运行时把两个标记替换成真实机场（注入用的 token 是**该配置自己的 token**）：
 
-- `# __PROXY_PROVIDERS__` → 每个机场一个 `proxy-providers` 条目，URL 指向本 Worker 的 `/providers/<机场 id>`
-- `__PROVIDER_NAMES__` → 机场名列表（YAML key 用名字，非 ASCII 名会自动加引号）
+- `# __PROXY_PROVIDERS__` → 每个机场（或配置选中的那个节点组）一个 `proxy-providers` 条目，
+  URL 指向本 Worker 的 `/providers/<机场 id>` 或 `/groups/<节点组 id>`
+- `__PROVIDER_NAMES__` → 来源名列表（YAML key 用名字，一律加引号）
 
 所以配置里不会出现真实机场链接，新增机场也只要在后台加一行。
 
@@ -132,8 +154,8 @@ pnpm deploy
 
 ```
 src/
-├── worker/          Worker：订阅、provider 中转、机场与配置读写
-├── web/             React SPA：配置列表、机场、设置
+├── worker/          Worker：订阅、provider 中转、机场 / 节点组 / 配置读写
+├── web/             React SPA：配置列表、机场、节点组合、设置
 └── shared/          前后端共享的 Zod schema 与 DTO
 configs/clash.yaml   模板源
 migrations/          D1 迁移
@@ -145,7 +167,8 @@ scripts/generate.mjs 模板编译
 ## 安全
 
 - 管理口令用常量时间比较，只存在 localStorage；订阅 token 与它分离，订阅链接泄露不影响写入权限。
-- 每份配置一条 token，`/providers/<机场 id>` 只校验这个 token 属于任意一份配置。
+- 每份配置一条 token，`/providers/<机场 id>` 与 `/groups/<节点组 id>` 只校验这个 token
+  属于任意一份配置。
 - 机场 URL 只存在 D1 里，不会出现在下发给客户端的配置中；节点凭据也只留在 Worker 侧，
   后台列表拿到的字段是裁剪过的。
 - 未配置 `ADMIN_TOKEN` 时配置接口返回 503。

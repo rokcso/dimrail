@@ -11,6 +11,7 @@ import type {
   ConfigDetail,
   ConfigListResponse,
   ConfigSummary,
+  NodeGroupListResponse,
   SaveResponse,
   TokenResponse,
 } from '@/shared/schema';
@@ -39,10 +40,14 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
   const [savedYaml, setSavedYaml] = useState('');
   const [name, setName] = useState('');
   const [savedName, setSavedName] = useState('');
+  /** 节点来源：'' = 全部节点，否则是节点组 id。 */
+  const [scope, setScope] = useState('');
   const [notices, setNotices] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const copyTimer = useRef<number | null>(null);
+  /** 已经同步进编辑器的配置 id：换节点来源会更新缓存，不该覆盖未保存的 YAML。 */
+  const syncedConfigId = useRef<string | null>(null);
 
   const list = useQuery({
     queryKey: ['configs'],
@@ -51,9 +56,17 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
     refetchOnWindowFocus: false,
   });
 
+  const groups = useQuery({
+    queryKey: ['groups'],
+    queryFn: () => api.get<NodeGroupListResponse>('/api/groups', token),
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
   const configs = list.data?.configs ?? [];
   const activeId = selected ?? configs[0]?.id ?? null;
   const active = configs.find((item) => item.id === activeId) ?? null;
+  const groupOptions = groups.data?.groups ?? [];
 
   const detail = useQuery({
     queryKey: ['config', activeId],
@@ -66,19 +79,21 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
   const loaded = detail.data && detail.data.id === activeId ? detail.data : null;
 
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || syncedConfigId.current === loaded.id) return;
+    syncedConfigId.current = loaded.id;
     setYaml(loaded.yaml);
     setSavedYaml(loaded.yaml);
     setName(loaded.name);
     setSavedName(loaded.name);
+    setScope(loaded.groupId ?? '');
     setNotices([]);
     setError('');
   }, [loaded]);
 
   useEffect(() => {
-    const failure = list.error ?? detail.error;
+    const failure = list.error ?? detail.error ?? groups.error;
     if (failure instanceof ApiError && failure.status === 401) onReject();
-  }, [list.error, detail.error, onReject]);
+  }, [list.error, detail.error, groups.error, onReject]);
 
   useEffect(
     () => () => {
@@ -109,6 +124,7 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
       setNotices(response.notices);
       setError('');
       void queryClient.invalidateQueries({ queryKey: ['configs'] });
+      void queryClient.invalidateQueries({ queryKey: ['overview'] });
     },
     onError: (err: Error) => {
       setError(err.message);
@@ -122,6 +138,7 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
       queryClient.setQueryData(['config', created.id], created);
       setSelected(created.id);
       void queryClient.invalidateQueries({ queryKey: ['configs'] });
+      void queryClient.invalidateQueries({ queryKey: ['overview'] });
     },
     onError: (err: Error) => {
       setError(err.message);
@@ -135,6 +152,7 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
       queryClient.removeQueries({ queryKey: ['config', id] });
       if (selected === id) setSelected(null);
       void queryClient.invalidateQueries({ queryKey: ['configs'] });
+      void queryClient.invalidateQueries({ queryKey: ['overview'] });
     },
     onError: (err: Error) => {
       setError(err.message);
@@ -145,6 +163,23 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
   const regenerate = useMutation({
     mutationFn: (id: string) => api.post<TokenResponse>(`/api/configs/${id}/token`, token),
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['configs'] });
+    },
+    onError: (err: Error) => {
+      setError(err.message);
+      if (err instanceof ApiError && err.status === 401) onReject();
+    },
+  });
+
+  const changeScope = useMutation({
+    mutationFn: (groupId: string | null) =>
+      api.put<SaveResponse>(`/api/configs/${activeId}`, token, { groupId }),
+    onSuccess: (_response, groupId) => {
+      setScope(groupId ?? '');
+      queryClient.setQueryData<ConfigDetail>(['config', activeId], (prev) =>
+        prev ? { ...prev, groupId } : prev,
+      );
+      setError('');
       void queryClient.invalidateQueries({ queryKey: ['configs'] });
     },
     onError: (err: Error) => {
@@ -195,8 +230,13 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
 
   const sidebar = (
     <>
-      <div className="flex shrink-0 items-center justify-between pr-2 pb-1 pl-4">
-        <span className="text-[11px] font-medium">配置</span>
+      <div className="flex h-12 shrink-0 items-center justify-between px-3">
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-[11px] font-medium">配置</span>
+          <span className="text-[11px] tabular-nums text-muted-foreground">
+            {list.isPending ? '…' : configs.length}
+          </span>
+        </div>
         <button
           type="button"
           title="新建配置"
@@ -215,7 +255,7 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
             <div
               key={item.id}
               className={cn(
-                'group relative flex h-7 items-center rounded-control pr-7',
+                'group relative flex h-8 items-center rounded-control pr-7',
                 isActive ? 'bg-accent' : 'hover:bg-muted',
               )}
             >
@@ -288,6 +328,24 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
           }
           actions={
             <>
+              <select
+                aria-label="节点来源"
+                title="这份配置使用全部节点，还是某个节点组"
+                value={scope}
+                onChange={(event) => changeScope.mutate(event.target.value || null)}
+                disabled={changeScope.isPending}
+                className="h-6 max-w-44 rounded-control border-[0.5px] border-input bg-background px-1.5 text-[11px] text-foreground outline-none disabled:opacity-50"
+              >
+                <option value="">全部节点</option>
+                {scope && !groupOptions.some((group) => group.id === scope) && (
+                  <option value={scope}>{groups.isPending ? '载入中…' : '节点组已失效'}</option>
+                )}
+                {groupOptions.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}（{group.nodeCount}）
+                  </option>
+                ))}
+              </select>
               <Button variant="outline" size="sm" onClick={copyFeed} title={feed}>
                 {copied ? (
                   <RiCheckLine className="size-3.5 text-primary" />

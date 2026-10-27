@@ -32,6 +32,14 @@ describe('parseRoute', () => {
     expect(parseRoute('/providers')).toEqual({ kind: 'notFound' });
   });
 
+  it('节点组订阅路径', () => {
+    expect(parseRoute('/groups/grp-1')).toEqual({ kind: 'group', id: 'grp-1' });
+    expect(parseRoute('/groups/grp-1/')).toEqual({ kind: 'group', id: 'grp-1' });
+    expect(parseRoute('/groups')).toEqual({ kind: 'notFound' });
+    expect(parseRoute('/groups/a/b')).toEqual({ kind: 'notFound' });
+    expect(parseRoute('/admin/groups')).toEqual({ kind: 'assets' });
+  });
+
   it('其余交给静态资源', () => {
     expect(parseRoute('/admin')).toEqual({ kind: 'assets' });
     expect(parseRoute('/admin/settings')).toEqual({ kind: 'assets' });

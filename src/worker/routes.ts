@@ -3,11 +3,13 @@ export type Route =
   | { kind: 'api'; path: string }
   | { kind: 'config'; id: string }
   | { kind: 'provider'; id: string }
+  | { kind: 'group'; id: string }
   | { kind: 'assets' }
   | { kind: 'notFound' };
 
 const CONFIG_PATH = /^\/p\/([A-Za-z0-9_-]{1,32})$/;
 const PROVIDER_PATH = /^\/providers\/([^/]+)$/;
+const GROUP_PATH = /^\/groups\/([^/]+)$/;
 
 /**
  * 纯路径解析，不碰 env 与网络，方便单测。
@@ -29,6 +31,16 @@ export function parseRoute(pathname: string): Route {
     if (!match?.[1]) return { kind: 'notFound' };
     try {
       return { kind: 'provider', id: decodeURIComponent(match[1]) };
+    } catch {
+      return { kind: 'notFound' };
+    }
+  }
+
+  if (path === '/groups' || path.startsWith('/groups/')) {
+    const match = GROUP_PATH.exec(path);
+    if (!match?.[1]) return { kind: 'notFound' };
+    try {
+      return { kind: 'group', id: decodeURIComponent(match[1]) };
     } catch {
       return { kind: 'notFound' };
     }

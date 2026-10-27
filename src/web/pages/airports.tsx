@@ -183,8 +183,13 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
 
   const sidebar = (
     <>
-      <div className="flex shrink-0 items-center justify-between pr-2 pb-1 pl-4">
-        <span className="text-[11px] font-medium">机场</span>
+      <div className="flex h-12 shrink-0 items-center justify-between px-3">
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-[11px] font-medium">机场</span>
+          <span className="text-[11px] tabular-nums text-muted-foreground">
+            {list.isPending ? '…' : airports.length}
+          </span>
+        </div>
         <button
           type="button"
           title="添加机场"
@@ -203,7 +208,7 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
           type="button"
           onClick={() => setSelected(null)}
           className={cn(
-            'flex h-7 w-full items-center rounded-control px-2 text-left text-[13px] outline-none transition-colors',
+            'flex h-8 w-full items-center rounded-control px-2 text-left text-[13px] outline-none transition-colors',
             selected === null
               ? 'bg-accent text-accent-foreground'
               : 'text-foreground hover:bg-muted',
@@ -219,7 +224,7 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
             <div
               key={airport.id}
               className={cn(
-                'group relative flex h-7 items-center rounded-control pr-7',
+                'group relative flex h-8 items-center rounded-control pr-7',
                 isActive ? 'bg-accent' : 'hover:bg-muted',
               )}
             >

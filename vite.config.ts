@@ -15,8 +15,12 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: {
-      // 保持 Host 为前端地址，Worker 的同源判断才能通过
+      // 保持 Host 为前端地址，Worker 的同源判断才能通过。
+      // /p 与 /providers 也代理上，本地后台复制的订阅链接才能直接用。
       '/api': { target: WORKER_ORIGIN, changeOrigin: false },
+      '/p': { target: WORKER_ORIGIN, changeOrigin: false },
+      '/providers': { target: WORKER_ORIGIN, changeOrigin: false },
+      '/groups': { target: WORKER_ORIGIN, changeOrigin: false },
     },
   },
 });

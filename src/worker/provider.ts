@@ -4,42 +4,56 @@ import {
   getAirport,
   listUserinfo,
   markError,
-  type ProviderRef,
   saveNodes,
 } from './airport-store';
 import type { Bindings } from './env';
+import { getGroupSummary, listGroupNodes } from './group-store';
+import type { ProxyNode } from './subscription';
 import { fetchSubscription } from './subscription';
 
 /** 中转缓存的有效期：超过就回源，回源失败仍吐旧的。 */
 const CACHE_TTL_MS = 3 * 60 * 60 * 1000;
 
-/** 只给普通名字去掉引号，中文和空格一律 quoted，省得 YAML 解析出歧义。 */
+/** 一律 quoted：`true`、`null`、`123` 这类名字不加引号会变成 YAML 布尔/数字。 */
 function yamlKey(name: string): string {
-  return /^[A-Za-z0-9_-]+$/.test(name) ? name : JSON.stringify(name);
+  return JSON.stringify(name);
+}
+
+/** 配置的节点来源：一个机场，或一个节点组。 */
+export interface ProviderSource {
+  id: string;
+  name: string;
+  kind: 'airport' | 'group';
 }
 
 /** 运行时注入到 proxy-providers 段的 YAML 片段。URL 与缓存路径用 id，key 用显示名。 */
-export function buildProvidersYaml(refs: ProviderRef[], origin: string, token: string): string {
-  return refs
-    .map((ref) =>
-      [
-        `  ${yamlKey(ref.name)}:`,
+export function buildProvidersYaml(
+  sources: ProviderSource[],
+  origin: string,
+  token: string,
+): string {
+  return sources
+    .map((source) => {
+      const segment = source.kind === 'group' ? 'groups' : 'providers';
+      const file = source.kind === 'group' ? `group-${source.id}` : source.id;
+      return [
+        `  ${yamlKey(source.name)}:`,
         '    type: http',
-        `    url: ${origin}/providers/${encodeURIComponent(ref.id)}?token=${encodeURIComponent(token)}`,
+        `    url: ${origin}/${segment}/${encodeURIComponent(source.id)}?token=${encodeURIComponent(token)}`,
         '    interval: 10800',
-        `    path: ./providers/${ref.id}.yaml`,
+        `    path: ./providers/${file}.yaml`,
         '    health-check:',
         '      enable: true',
         '      interval: 300',
         '      url: http://www.gstatic.com/generate_204',
-      ].join('\n'),
-    )
+      ].join('\n');
+    })
     .join('\n');
 }
 
 /** 代理组里 use 的名字列表。 */
-export function providerNames(refs: ProviderRef[]): string {
-  return refs.map((ref) => yamlKey(ref.name)).join(', ');
+export function providerNames(sources: ProviderSource[]): string {
+  return sources.map((source) => yamlKey(source.name)).join(', ');
 }
 
 /**
@@ -121,7 +135,23 @@ function providerYaml(airport: AirportRecord, cache: 'hit' | 'miss' | 'stale'): 
   };
   if (airport.userinfo) headers['Subscription-Userinfo'] = airport.userinfo;
 
-  return new Response(stringify({ proxies: airport.nodes }, { lineWidth: 0 }), {
+  return proxiesResponse(airport.nodes, headers);
+}
+
+/** 节点组不是一个可回源的机场，只从 D1 读成员当前对应的节点。 */
+export async function relayGroup(env: Bindings, id: string): Promise<Response> {
+  const group = await getGroupSummary(env, id);
+  if (!group) return text('节点组不存在', 404);
+  const nodes = await listGroupNodes(env, id);
+  return proxiesResponse(nodes, {
+    'Content-Type': 'text/yaml; charset=utf-8',
+    'Cache-Control': 'private, no-store',
+    'Profile-Update-Interval': '10800',
+  });
+}
+
+function proxiesResponse(nodes: ProxyNode[], headers: Record<string, string>): Response {
+  return new Response(stringify({ proxies: nodes }, { lineWidth: 0 }), {
     status: 200,
     headers,
   });
