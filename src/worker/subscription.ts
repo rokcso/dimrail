@@ -5,7 +5,7 @@ export type ProxyNode = Record<string, unknown>;
 
 const TIMEOUT_MS = 8000;
 const MAX_BYTES = 8 * 1024 * 1024;
-/** 单行要塞进 D1（约 1MB），2000 个节点是安全上限。 */
+/** 单个机场最多留 2000 个节点：再多的机场本来也是垃圾堆，订阅会变得没法用。 */
 export const MAX_NODES = 2000;
 const USER_AGENT = 'clash.meta';
 

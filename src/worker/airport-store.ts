@@ -1,7 +1,7 @@
 import type { AirportSummary } from '../shared/schema';
 import type { Bindings } from './env';
 import { generateId } from './ids';
-import type { ProxyNode } from './subscription';
+import { type ProxyNode, toNodeViewFields } from './subscription';
 
 export interface AirportRecord extends AirportSummary {
   nodes: ProxyNode[];
@@ -61,20 +61,34 @@ export async function listAirports(env: Bindings): Promise<AirportSummary[]> {
 }
 
 export async function getAirport(env: Bindings, id: string): Promise<AirportRecord | null> {
-  const row = await requireDb(env)
-    .prepare(`SELECT ${SUMMARY_COLUMNS}, nodes FROM airports WHERE id = ?`)
+  const db = requireDb(env);
+  const row = await db
+    .prepare(`SELECT ${SUMMARY_COLUMNS} FROM airports WHERE id = ?`)
     .bind(id)
-    .first<AirportRow & { nodes: string }>();
+    .first<AirportRow>();
   if (!row) return null;
+  return { ...toSummary(row), nodes: await selectNodes(env, id) };
+}
 
-  let nodes: ProxyNode[] = [];
-  try {
-    const parsed: unknown = JSON.parse(row.nodes);
-    if (Array.isArray(parsed)) nodes = parsed as ProxyNode[];
-  } catch {
-    // 存坏了当作没有缓存，下次拉取会覆盖
+/** 某个机场缓存下来的完整节点，按原顺序。 */
+async function selectNodes(env: Bindings, airportId: string): Promise<ProxyNode[]> {
+  const { results } = await requireDb(env)
+    .prepare('SELECT data FROM airport_nodes WHERE airport_id = ? ORDER BY idx ASC')
+    .bind(airportId)
+    .all<{ data: string }>();
+
+  const nodes: ProxyNode[] = [];
+  for (const item of results ?? []) {
+    try {
+      const parsed: unknown = JSON.parse(item.data);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        nodes.push(parsed as ProxyNode);
+      }
+    } catch {
+      // 单行存坏了就跳过，别让整份缓存跟着废掉
+    }
   }
-  return { ...toSummary(row), nodes };
+  return nodes;
 }
 
 /** 下发用：启用的机场，按 position 排。 */
@@ -87,26 +101,27 @@ export async function listProviderRefs(env: Bindings): Promise<ProviderRef[]> {
   return results ?? [];
 }
 
-/** 节点展示用：启用的机场连同缓存一起拿出来。 */
-export async function listNodeSources(
-  env: Bindings,
-): Promise<{ id: string; name: string; nodes: ProxyNode[] }[]> {
+/** 节点列表：只取展示要用的四列，凭据留在 data 里不往外送。 */
+export async function listNodeViews(env: Bindings): Promise<NodeViewRow[]> {
   const { results } = await requireDb(env)
     .prepare(
-      'SELECT id, name, nodes FROM airports WHERE enabled = 1 ORDER BY position ASC, created_at ASC',
+      `SELECT a.id AS airportId, a.name AS airportName, n.name, n.type, n.server, n.port
+       FROM airport_nodes AS n
+       JOIN airports AS a ON a.id = n.airport_id
+       WHERE a.enabled = 1
+       ORDER BY a.position ASC, a.created_at ASC, n.idx ASC`,
     )
-    .all<{ id: string; name: string; nodes: string }>();
+    .all<NodeViewRow>();
+  return results ?? [];
+}
 
-  return (results ?? []).map((row) => {
-    let nodes: ProxyNode[] = [];
-    try {
-      const parsed: unknown = JSON.parse(row.nodes);
-      if (Array.isArray(parsed)) nodes = parsed as ProxyNode[];
-    } catch {
-      // 存坏了当作没有缓存
-    }
-    return { id: row.id, name: row.name, nodes };
-  });
+export interface NodeViewRow {
+  airportId: string;
+  airportName: string;
+  name: string;
+  type: string;
+  server: string;
+  port: string;
 }
 
 export async function countAirports(env: Bindings): Promise<number> {
@@ -212,9 +227,12 @@ export async function updateAirport(
 
   // 换了订阅链接就把旧缓存和旧错误一起清掉，免得显示上一家的节点。
   const urlChanged = next.url !== row.url;
+  if (urlChanged) {
+    await db.prepare('DELETE FROM airport_nodes WHERE airport_id = ?').bind(id).run();
+  }
   await db
     .prepare(
-      `UPDATE airports SET name = ?, url = ?, enabled = ?, updated_at = ?${urlChanged ? ", nodes = '[]', node_count = 0, userinfo = NULL, fetched_at = NULL, error = NULL, error_at = NULL" : ''}
+      `UPDATE airports SET name = ?, url = ?, enabled = ?, updated_at = ?${urlChanged ? ', node_count = 0, userinfo = NULL, fetched_at = NULL, error = NULL, error_at = NULL' : ''}
        WHERE id = ?`,
     )
     .bind(next.name, next.url, next.enabled, updatedAt, id)
@@ -235,25 +253,89 @@ export async function updateAirport(
 }
 
 export async function deleteAirport(env: Bindings, id: string): Promise<boolean> {
-  const result = await requireDb(env).prepare('DELETE FROM airports WHERE id = ?').bind(id).run();
-  return (result.meta.changes ?? 0) > 0;
+  const db = requireDb(env);
+  const [, result] = await db.batch([
+    db.prepare('DELETE FROM airport_nodes WHERE airport_id = ?').bind(id),
+    db.prepare('DELETE FROM airports WHERE id = ?').bind(id),
+  ]);
+  return (result?.meta.changes ?? 0) > 0;
 }
 
 /** 拉取成功：覆盖节点、清错误。userinfo 为空时保留上一次的（有的机场不是每次都给）。 */
+/**
+ * 一次 INSERT 塞多少节点。
+ * D1 单条语句最多 100 个绑定参数，这里 7 列 × 14 行 = 98，卡在上限下面。
+ */
+export const NODES_PER_INSERT = 14;
+/** 一个 batch 里最多排多少条语句，太多会被 D1 拒。 */
+const STATEMENTS_PER_BATCH = 40;
+
+/**
+ * 覆盖某个机场的节点。
+ * 一行一个节点：真实机场几百个节点，塞成一个字段会超出线上 D1 的单值上限
+ * （本地不报，线上直接 internal error），所以宁可多条小语句。
+ *
+ * 顺序是先按位置覆盖、再删掉多出来的尾部：中途失败也只是新旧混着，
+ * 不会出现「旧的删了、新的没写进去」的空档。
+ */
 export async function saveNodes(
   env: Bindings,
   id: string,
   nodes: ProxyNode[],
   userinfo: string | null,
 ): Promise<void> {
+  const db = requireDb(env);
   const now = Date.now();
-  await requireDb(env)
+  const perBatch = NODES_PER_INSERT * STATEMENTS_PER_BATCH;
+
+  try {
+    for (let start = 0; start < nodes.length; start += perBatch) {
+      const stop = Math.min(start + perBatch, nodes.length);
+      const statements: D1PreparedStatement[] = [];
+
+      for (let offset = start; offset < stop; offset += NODES_PER_INSERT) {
+        const slice = nodes.slice(offset, Math.min(offset + NODES_PER_INSERT, stop));
+        const placeholders = slice.map(() => '(?, ?, ?, ?, ?, ?, ?)').join(', ');
+        const values = slice.flatMap((node, i) => {
+          const view = toNodeViewFields(node);
+          return [
+            id,
+            offset + i,
+            view.name,
+            view.type,
+            view.server,
+            view.port,
+            JSON.stringify(node),
+          ];
+        });
+        statements.push(
+          db
+            .prepare(
+              `INSERT OR REPLACE INTO airport_nodes
+                 (airport_id, idx, name, type, server, port, data)
+               VALUES ${placeholders}`,
+            )
+            .bind(...values),
+        );
+      }
+      await db.batch(statements);
+    }
+
+    await db
+      .prepare('DELETE FROM airport_nodes WHERE airport_id = ? AND idx >= ?')
+      .bind(id, nodes.length)
+      .run();
+  } catch (err) {
+    throw new Error(`写入 ${nodes.length} 个节点失败：${message(err)}`);
+  }
+
+  await db
     .prepare(
-      `UPDATE airports SET nodes = ?, node_count = ?, userinfo = COALESCE(?, userinfo),
+      `UPDATE airports SET node_count = ?, userinfo = COALESCE(?, userinfo),
          fetched_at = ?, error = NULL, error_at = NULL, updated_at = ?
        WHERE id = ?`,
     )
-    .bind(JSON.stringify(nodes), nodes.length, userinfo, now, now, id)
+    .bind(nodes.length, userinfo, now, now, id)
     .run();
 }
 
@@ -264,4 +346,8 @@ export async function markError(env: Bindings, id: string, message: string): Pro
     .prepare('UPDATE airports SET error = ?, error_at = ?, updated_at = ? WHERE id = ?')
     .bind(message, now, now, id)
     .run();
+}
+
+function message(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }

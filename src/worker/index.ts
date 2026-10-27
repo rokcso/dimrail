@@ -24,7 +24,7 @@ import {
   deleteAirport,
   getAirport,
   listAirports,
-  listNodeSources,
+  listNodeViews,
   listProviderRefs,
   markError,
   nameTaken,
@@ -50,7 +50,7 @@ import type { Bindings } from './env';
 import { parseLegacyProviders } from './legacy';
 import { aggregatedUserinfo, buildProvidersYaml, providerNames, relayProvider } from './provider';
 import { parseRoute } from './routes';
-import { fetchSubscription, toNodeViewFields } from './subscription';
+import { fetchSubscription } from './subscription';
 import { validateConfig } from './validate';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8' };
@@ -156,6 +156,8 @@ async function handleApi(request: Request, env: Bindings, path: string): Promise
   try {
     return await routeApi(request, env, path);
   } catch (err) {
+    // 线上出问题时 wrangler tail 里能看到是哪一步炸的
+    console.error(`${request.method} ${path}`, err);
     return json({ error: errorMessage(err) }, 500);
   }
 }
@@ -274,18 +276,15 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
 
   if (path === '/api/nodes') {
     if (method !== 'GET') return methodNotAllowed();
-    const [sources, airports] = await Promise.all([listNodeSources(env), listAirports(env)]);
-    const nodes: NodeView[] = [];
-
-    for (const source of sources) {
-      for (const node of source.nodes) {
-        nodes.push({
-          ...toNodeViewFields(node),
-          airportId: source.id,
-          airportName: source.name,
-        });
-      }
-    }
+    const [rows, airports] = await Promise.all([listNodeViews(env), listAirports(env)]);
+    const nodes: NodeView[] = rows.map((row) => ({
+      name: row.name,
+      type: row.type,
+      server: row.server,
+      port: row.port,
+      airportId: row.airportId,
+      airportName: row.airportName,
+    }));
 
     const enabled = airports.filter((airport) => airport.enabled);
     const stamps = enabled

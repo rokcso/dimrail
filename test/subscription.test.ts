@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { airportCreateSchema } from '@/shared/schema';
+import { NODES_PER_INSERT } from '@/worker/airport-store';
 import { MAX_NODES, parseProxies, toNodeViewFields } from '@/worker/subscription';
 
 const yamlWith = (count: number) =>
@@ -109,5 +110,12 @@ describe('airportCreateSchema', () => {
     expect(airportCreateSchema.safeParse({ name: 'a', url: 'https://x.com/sub' }).success).toBe(
       true,
     );
+  });
+});
+
+describe('节点写入分片', () => {
+  it('一条 INSERT 的绑定参数不超过 D1 的 100 上限', () => {
+    // 每行 7 列：airport_id, idx, name, type, server, port, data
+    expect(NODES_PER_INSERT * 7).toBeLessThanOrEqual(100);
   });
 });
