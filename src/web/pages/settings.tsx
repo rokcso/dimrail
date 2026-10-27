@@ -186,11 +186,6 @@ export function SettingsPage({ token, path, onNavigate, onReject }: PageProps) {
           value={info ? (info.adminTokenConfigured ? '已配置' : '未配置') : '—'}
           danger={info ? !info.adminTokenConfigured : false}
         />
-        {info && info.legacyEnvCount > 0 && (
-          <span className="text-warning">
-            PROVIDERS_JSON 里还有 {info.legacyEnvCount} 个机场没导入，去「机场」页一键导入
-          </span>
-        )}
       </div>
 
       {message && (

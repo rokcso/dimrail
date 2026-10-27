@@ -47,7 +47,6 @@ import {
   updateConfig,
 } from './config-store';
 import type { Bindings } from './env';
-import { parseLegacyProviders } from './legacy';
 import { aggregatedUserinfo, buildProvidersYaml, providerNames, relayProvider } from './provider';
 import { parseRoute } from './routes';
 import { fetchSubscription } from './subscription';
@@ -188,7 +187,6 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
     ]);
     return json({
       airports: { count: airportCount, nodeCount, failed },
-      legacyEnvCount: Object.keys(parseLegacyProviders(env)).length,
       adminTokenConfigured: Boolean(env.ADMIN_TOKEN?.trim()),
       base: { seeded: base.seeded, updatedAt: base.updatedAt },
       configCount,
@@ -237,10 +235,7 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
 
   if (path === '/api/airports') {
     if (method === 'GET') {
-      return json({
-        airports: await listAirports(env),
-        legacyEnvCount: Object.keys(parseLegacyProviders(env)).length,
-      } satisfies AirportListResponse);
+      return json({ airports: await listAirports(env) } satisfies AirportListResponse);
     }
     if (method === 'POST') {
       const payload = airportCreateSchema.safeParse(await readJson(request));
@@ -266,24 +261,6 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
       failed,
       airports: await listAirports(env),
     } satisfies RefreshResponse);
-  }
-
-  if (path === '/api/airports/import-env') {
-    if (method !== 'POST') return methodNotAllowed();
-    const legacy = parseLegacyProviders(env);
-    const existing = new Set((await listAirports(env)).map((airport) => airport.name));
-    let imported = 0;
-    let skipped = 0;
-
-    for (const [name, url] of Object.entries(legacy)) {
-      if (existing.has(name)) {
-        skipped += 1;
-        continue;
-      }
-      await createAirport(env, { name, url });
-      imported += 1;
-    }
-    return json({ imported, skipped, total: Object.keys(legacy).length }, 201);
   }
 
   if (path === '/api/nodes') {

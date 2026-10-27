@@ -60,7 +60,6 @@ PATCH /api/airports/<id>          改名 / 换链接 / 启停
 DELETE /api/airports/<id>         删除
 POST /api/airports/<id>/refresh   重新拉取单个机场
 POST /api/airports/refresh        重新拉取所有启用的机场
-POST /api/airports/import-env     把 PROVIDERS_JSON 里的机场导入数据库
 GET  /api/nodes                   所有节点（已裁剪，只给展示字段）
 ```
 
@@ -73,9 +72,6 @@ GET  /api/nodes                   所有节点（已裁剪，只给展示字段�
 机场订阅链接存在 D1 里，在 `/admin/airports` 添加。
 
 订阅链接的 token 也不再走 Secret：每份配置一条，存在 D1 里，可以在后台查看和重新生成。
-
-`PROVIDERS_JSON` 只在迁移老数据时用得上：如果这个变量还在，机场页顶部会出现一条
-「还有 N 个机场没搬进数据库」，点「导入」就搬进 D1，之后这个变量可以删掉。
 
 ## 本地开发
 

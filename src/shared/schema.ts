@@ -109,8 +109,6 @@ export interface AirportSummary {
 
 export interface AirportListResponse {
   airports: AirportSummary[];
-  /** PROVIDERS_JSON 里还剩几个没导入（0 表示这个环境变量可以删了） */
-  legacyEnvCount: number;
 }
 
 /** 刷新单点或全部的结果。 */
@@ -118,12 +116,6 @@ export interface RefreshResponse {
   refreshed: number;
   failed: number;
   airports: AirportSummary[];
-}
-
-export interface AirportImportResponse {
-  imported: number;
-  skipped: number;
-  total: number;
 }
 
 /** 展示用节点：只给这几列，uuid 和密码不往浏览器送。 */
@@ -146,7 +138,6 @@ export interface NodesResponse {
 
 export interface OverviewResponse {
   airports: { count: number; nodeCount: number; failed: number };
-  legacyEnvCount: number;
   adminTokenConfigured: boolean;
   base: { seeded: boolean; updatedAt: number | null };
   configCount: number;

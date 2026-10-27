@@ -2,14 +2,12 @@ import {
   RiAddLine,
   RiCheckLine,
   RiDeleteBinLine,
-  RiDownloadLine,
   RiRefreshLine,
   RiSearchLine,
 } from '@remixicon/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import type {
-  AirportImportResponse,
   AirportListResponse,
   AirportSummary,
   NodesResponse,
@@ -142,15 +140,6 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
     onError: onMutationError,
   });
 
-  const importLegacy = useMutation({
-    mutationFn: () => api.post<AirportImportResponse>('/api/airports/import-env', token),
-    onSuccess: async (result) => {
-      setError(result.imported ? '' : '没有可导入的机场');
-      await refreshStores();
-    },
-    onError: onMutationError,
-  });
-
   const types = useMemo(() => {
     const set = new Set(nodes.map((node) => node.type).filter(Boolean));
     return [...set].sort();
@@ -191,7 +180,6 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
   };
 
   const totalNodes = nodes.length;
-  const legacyEnvCount = list.data?.legacyEnvCount ?? 0;
 
   const sidebar = (
     <>
@@ -416,21 +404,6 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
       {error && (
         <div className="shrink-0 border-b-[0.5px] border-border px-6 py-1.5 text-[11px] text-danger">
           {error}
-        </div>
-      )}
-
-      {legacyEnvCount > 0 && (
-        <div className="flex shrink-0 items-center gap-2 border-b-[0.5px] border-border px-6 py-1.5 text-[11px] text-warning">
-          <span>PROVIDERS_JSON 里还有 {legacyEnvCount} 个机场没搬进数据库。</span>
-          <button
-            type="button"
-            onClick={() => importLegacy.mutate()}
-            disabled={importLegacy.isPending}
-            className="flex items-center gap-1 rounded-control underline underline-offset-2 outline-none hover:text-foreground disabled:opacity-50"
-          >
-            <RiDownloadLine className="size-3.5" />
-            {importLegacy.isPending ? '导入中' : '导入'}
-          </button>
         </div>
       )}
 
