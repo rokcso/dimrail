@@ -18,25 +18,30 @@ describe('parseRoute', () => {
   });
 
   it('配置订阅路径', () => {
-    expect(parseRoute('/p/k3m9x2qa')).toEqual({ kind: 'config', id: 'k3m9x2qa' });
-    expect(parseRoute('/p/k3m9x2qa/')).toEqual({ kind: 'config', id: 'k3m9x2qa' });
-    expect(parseRoute('/p/')).toEqual({ kind: 'notFound' });
-    expect(parseRoute('/p/a/b')).toEqual({ kind: 'notFound' });
-    expect(parseRoute('/p/中文')).toEqual({ kind: 'notFound' });
+    expect(parseRoute('/sub/k3m9x2qa')).toEqual({ kind: 'config', id: 'k3m9x2qa' });
+    expect(parseRoute('/sub/k3m9x2qa/')).toEqual({ kind: 'config', id: 'k3m9x2qa' });
+    expect(parseRoute('/sub/')).toEqual({ kind: 'notFound' });
+    expect(parseRoute('/sub/a/b')).toEqual({ kind: 'notFound' });
+    expect(parseRoute('/sub/中文')).toEqual({ kind: 'notFound' });
   });
 
   it('机场中转路径', () => {
-    expect(parseRoute('/providers/airport-a')).toEqual({ kind: 'provider', id: 'airport-a' });
-    expect(parseRoute('/providers/airport-a/')).toEqual({ kind: 'provider', id: 'airport-a' });
-    expect(parseRoute('/providers/k3m9x2qa')).toEqual({ kind: 'provider', id: 'k3m9x2qa' });
+    expect(parseRoute('/providers/airports/airport-a')).toEqual({
+      kind: 'provider',
+      id: 'airport-a',
+    });
+    expect(parseRoute('/providers/airports/airport-a/')).toEqual({
+      kind: 'provider',
+      id: 'airport-a',
+    });
     expect(parseRoute('/providers')).toEqual({ kind: 'notFound' });
+    expect(parseRoute('/providers/airport-a')).toEqual({ kind: 'notFound' });
   });
 
   it('节点组订阅路径', () => {
-    expect(parseRoute('/groups/grp-1')).toEqual({ kind: 'group', id: 'grp-1' });
-    expect(parseRoute('/groups/grp-1/')).toEqual({ kind: 'group', id: 'grp-1' });
-    expect(parseRoute('/groups')).toEqual({ kind: 'notFound' });
-    expect(parseRoute('/groups/a/b')).toEqual({ kind: 'notFound' });
+    expect(parseRoute('/providers/groups/grp-1')).toEqual({ kind: 'group', id: 'grp-1' });
+    expect(parseRoute('/providers/groups/grp-1/')).toEqual({ kind: 'group', id: 'grp-1' });
+    expect(parseRoute('/providers/groups')).toEqual({ kind: 'notFound' });
     expect(parseRoute('/admin/groups')).toEqual({ kind: 'assets' });
   });
 

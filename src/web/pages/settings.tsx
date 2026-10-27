@@ -21,11 +21,9 @@ const TONE_LABEL: Record<Tone, string> = {
 };
 
 const SECTIONS = [
-  { id: 'base', label: '基础配置', icon: RiFileCodeLine },
-  { id: 'overview', label: '概览', icon: RiDashboardLine },
+  { id: 'base', label: '基础配置', to: '/admin/settings/base', icon: RiFileCodeLine },
+  { id: 'overview', label: '概览', to: '/admin/settings/overview', icon: RiDashboardLine },
 ] as const;
-
-type SettingsSection = (typeof SECTIONS)[number]['id'];
 
 export function SettingsPage({ token, path, onNavigate, onReject }: PageProps) {
   const queryClient = useQueryClient();
@@ -35,8 +33,7 @@ export function SettingsPage({ token, path, onNavigate, onReject }: PageProps) {
   const [error, setError] = useState('');
   /** 已灌进编辑器的数据版本：保存时更新缓存不该把提示和未保存内容冲掉。 */
   const syncedSource = useRef<string | null>(null);
-  /** 所有设置分组共用 /admin/settings，切换分组不改地址。 */
-  const [section, setSection] = useState<SettingsSection>('base');
+  const section = path === '/admin/settings/overview' ? 'overview' : 'base';
 
   const overview = useQuery({
     queryKey: ['overview'],
@@ -138,13 +135,13 @@ export function SettingsPage({ token, path, onNavigate, onReject }: PageProps) {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-px overflow-y-auto px-2 pb-2">
-        {SECTIONS.map(({ id, label, icon: Icon }) => {
+        {SECTIONS.map(({ id, label, to, icon: Icon }) => {
           const active = section === id;
           return (
             <button
               key={id}
               type="button"
-              onClick={() => setSection(id)}
+              onClick={() => onNavigate(to)}
               aria-current={active ? 'page' : undefined}
               className={cn(
                 'flex h-8 items-center gap-2 rounded-control px-2 text-left text-[13px] outline-none',

@@ -22,9 +22,15 @@ import { ApiError, api } from '../lib/api';
 import { cn, formatStamp } from '../lib/utils';
 import type { PageProps } from './types';
 
-export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
+export function AirportsPage({
+  token,
+  path,
+  selectedId,
+  onNavigate,
+  onReplace,
+  onReject,
+}: PageProps) {
   const queryClient = useQueryClient();
-  const [selected, setSelected] = useState<string | null>(null);
   const [nameDraft, setNameDraft] = useState('');
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -48,12 +54,17 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
   });
 
   const airports = list.data?.airports ?? [];
-  const active = airports.find((airport) => airport.id === selected) ?? null;
+  const active = airports.find((airport) => airport.id === selectedId) ?? null;
   const nodes = nodesQuery.data?.nodes ?? [];
 
   useEffect(() => {
     setNameDraft(active?.name ?? '');
   }, [active?.name]);
+
+  useEffect(() => {
+    if (list.isPending || !selectedId || active) return;
+    onReplace('/admin/airports');
+  }, [list.isPending, selectedId, active, onReplace]);
 
   useEffect(() => {
     const failure = list.error ?? nodesQuery.error;
@@ -81,8 +92,8 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
       setNewName('');
       setNewUrl('');
       setError('');
-      setSelected(airport.id);
       await refreshStores();
+      onNavigate(`/admin/airports/${airport.id}`);
     },
     onError: onMutationError,
   });
@@ -133,7 +144,6 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
   const remove = useMutation({
     mutationFn: (id: string) => api.del<{ ok: boolean }>(`/api/airports/${id}`, token),
     onSuccess: async () => {
-      setSelected(null);
       setError('');
       await refreshStores();
     },
@@ -210,12 +220,10 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
         <button
           type="button"
-          onClick={() => setSelected(null)}
+          onClick={() => onNavigate('/admin/airports')}
           className={cn(
             'flex h-8 w-full items-center rounded-control px-2 text-left text-[13px] outline-none',
-            selected === null
-              ? 'bg-accent text-accent-foreground'
-              : 'text-foreground hover:bg-muted',
+            !selectedId ? 'bg-accent text-accent-foreground' : 'text-foreground hover:bg-muted',
           )}
         >
           <span className="min-w-0 flex-1 truncate">全部节点</span>
@@ -223,7 +231,7 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
         </button>
 
         {airports.map((airport) => {
-          const isActive = airport.id === selected;
+          const isActive = airport.id === selectedId;
           return (
             <div
               key={airport.id}
@@ -234,7 +242,7 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
             >
               <button
                 type="button"
-                onClick={() => setSelected(airport.id)}
+                onClick={() => onNavigate(`/admin/airports/${airport.id}`)}
                 className={cn(
                   'flex min-w-0 flex-1 items-center gap-1.5 px-2 text-left text-[13px]',
                   isActive ? 'text-accent-foreground' : 'text-foreground',

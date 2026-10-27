@@ -8,20 +8,9 @@ import { AirportsPage } from './pages/airports';
 import { ConfigsPage } from './pages/configs';
 import { GroupsPage } from './pages/groups';
 import { SettingsPage } from './pages/settings';
+import { normalizePath, parseAdminPath } from './routes';
 
 const TOKEN_KEY = 'dimrail-admin-token';
-const SETTINGS_PATH = '/admin/settings';
-const AIRPORTS_PATH = '/admin/airports';
-const GROUPS_PATH = '/admin/groups';
-
-function normalizePath(pathname: string): string {
-  const path = pathname.replace(/\/+$/, '') || '/';
-  // 设置页的所有分组都留在 /admin/settings 一个地址里，旧链接不会失效。
-  if (path === SETTINGS_PATH || path.startsWith(`${SETTINGS_PATH}/`)) return SETTINGS_PATH;
-  if (path === AIRPORTS_PATH) return AIRPORTS_PATH;
-  if (path === GROUPS_PATH) return GROUPS_PATH;
-  return '/admin';
-}
 
 export function App() {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) ?? '');
@@ -35,8 +24,15 @@ export function App() {
   }, [path]);
 
   const navigate = useCallback((next: string) => {
-    history.pushState(null, '', next);
-    setPath(normalizePath(next));
+    const target = normalizePath(next);
+    history.pushState(null, '', target);
+    setPath(target);
+  }, []);
+
+  const replace = useCallback((next: string) => {
+    const target = normalizePath(next);
+    history.replaceState(null, '', target);
+    setPath(target);
   }, []);
 
   const reject = useCallback(() => {
@@ -55,10 +51,19 @@ export function App() {
     );
   }
 
-  const props = { token, path, onNavigate: navigate, onReject: reject };
-  if (path === SETTINGS_PATH) return <SettingsPage {...props} />;
-  if (path === AIRPORTS_PATH) return <AirportsPage {...props} />;
-  if (path === GROUPS_PATH) return <GroupsPage {...props} />;
+  const route = parseAdminPath(path);
+  const props = {
+    token,
+    path,
+    selectedId: route.name === 'settings' ? null : route.id,
+    onNavigate: navigate,
+    onReplace: replace,
+    onReject: reject,
+  };
+
+  if (route.name === 'settings') return <SettingsPage {...props} />;
+  if (route.name === 'airports') return <AirportsPage {...props} />;
+  if (route.name === 'groups') return <GroupsPage {...props} />;
   return <ConfigsPage {...props} />;
 }
 
@@ -92,6 +97,7 @@ function Gate({ onAccept }: { onAccept: (token: string) => void }) {
           <img src="/favicon.svg" alt="" className="size-5" />
           <span className="text-[15px] font-semibold tracking-tight">Dimrail</span>
         </div>
+
         <Input
           type="password"
           autoComplete="current-password"

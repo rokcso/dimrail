@@ -3,16 +3,15 @@ import type { ReactNode } from 'react';
 import { cn } from '@/web/lib/utils';
 
 const MAIN_TABS = [
-  { to: '/admin', label: '配置', icon: RiFileListLine, exact: true },
-  { to: '/admin/airports', label: '机场', icon: RiServerLine, exact: false },
-  { to: '/admin/groups', label: '节点组', icon: RiStackLine, exact: false },
+  { to: '/admin/configs', label: '配置', icon: RiFileListLine },
+  { to: '/admin/airports', label: '机场', icon: RiServerLine },
+  { to: '/admin/groups', label: '节点组', icon: RiStackLine },
 ];
 
 const SETTINGS_TAB = {
   to: '/admin/settings',
   label: '设置',
   icon: RiSettings3Line,
-  exact: false,
 };
 
 interface AppShellProps {
@@ -23,8 +22,8 @@ interface AppShellProps {
   children: ReactNode;
 }
 
-function isActive(path: string, to: string, exact: boolean): boolean {
-  return path === to || (!exact && path.startsWith(`${to}/`));
+function isActive(path: string, to: string): boolean {
+  return path === to || path.startsWith(`${to}/`);
 }
 
 /** 应用外壳：全局导航（栏 1）+ 列表（栏 2）+ 内容（栏 3）。 */
@@ -41,7 +40,7 @@ export function AppShell({ path, onNavigate, sidebar, children }: AppShellProps)
             <NavItem
               key={tab.to}
               {...tab}
-              active={isActive(path, tab.to, tab.exact)}
+              active={isActive(path, tab.to)}
               onNavigate={onNavigate}
             />
           ))}
@@ -50,7 +49,7 @@ export function AppShell({ path, onNavigate, sidebar, children }: AppShellProps)
         <div className="mt-auto px-2 pb-3">
           <NavItem
             {...SETTINGS_TAB}
-            active={isActive(path, SETTINGS_TAB.to, SETTINGS_TAB.exact)}
+            active={isActive(path, SETTINGS_TAB.to)}
             onNavigate={onNavigate}
           />
         </div>

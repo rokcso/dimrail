@@ -33,9 +33,15 @@ const TONE_LABEL: Record<Tone, string> = {
   error: '保存失败',
 };
 
-export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
+export function ConfigsPage({
+  token,
+  path,
+  selectedId,
+  onNavigate,
+  onReplace,
+  onReject,
+}: PageProps) {
   const queryClient = useQueryClient();
-  const [selected, setSelected] = useState<string | null>(null);
   const [yaml, setYaml] = useState('');
   const [savedYaml, setSavedYaml] = useState('');
   const [name, setName] = useState('');
@@ -64,7 +70,7 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
   });
 
   const configs = list.data?.configs ?? [];
-  const activeId = selected ?? configs[0]?.id ?? null;
+  const activeId = selectedId ?? configs[0]?.id ?? null;
   const active = configs.find((item) => item.id === activeId) ?? null;
   const groupOptions = groups.data?.groups ?? [];
 
@@ -77,6 +83,12 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
   });
 
   const loaded = detail.data && detail.data.id === activeId ? detail.data : null;
+
+  // 地址里的 id 被删掉或本来就不存在时，回到列表。
+  useEffect(() => {
+    if (list.isPending || !selectedId || active) return;
+    onReplace('/admin/configs');
+  }, [list.isPending, selectedId, active, onReplace]);
 
   useEffect(() => {
     if (!loaded || syncedConfigId.current === loaded.id) return;
@@ -134,11 +146,13 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
 
   const create = useMutation({
     mutationFn: () => api.post<ConfigDetail>('/api/configs', token, {}),
-    onSuccess: (created) => {
+    onSuccess: async (created) => {
       queryClient.setQueryData(['config', created.id], created);
-      setSelected(created.id);
-      void queryClient.invalidateQueries({ queryKey: ['configs'] });
-      void queryClient.invalidateQueries({ queryKey: ['overview'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['configs'] }),
+        queryClient.invalidateQueries({ queryKey: ['overview'] }),
+      ]);
+      onNavigate(`/admin/configs/${created.id}`);
     },
     onError: (err: Error) => {
       setError(err.message);
@@ -148,11 +162,12 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
 
   const remove = useMutation({
     mutationFn: (id: string) => api.del<{ ok: boolean }>(`/api/configs/${id}`, token),
-    onSuccess: (_data, id) => {
+    onSuccess: async (_data, id) => {
       queryClient.removeQueries({ queryKey: ['config', id] });
-      if (selected === id) setSelected(null);
-      void queryClient.invalidateQueries({ queryKey: ['configs'] });
-      void queryClient.invalidateQueries({ queryKey: ['overview'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['configs'] }),
+        queryClient.invalidateQueries({ queryKey: ['overview'] }),
+      ]);
     },
     onError: (err: Error) => {
       setError(err.message);
@@ -191,7 +206,7 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
   const select = (id: string) => {
     if (id === activeId) return;
     if (dirty && !window.confirm('当前配置有未保存的修改，切换后会丢失。继续？')) return;
-    setSelected(id);
+    onNavigate(`/admin/configs/${id}`);
   };
 
   const confirmDelete = (item: ConfigSummary) => {
@@ -205,7 +220,7 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
     regenerate.mutate(active.id);
   };
 
-  const feed = active ? `${location.origin}/p/${active.id}?token=${active.token}` : '';
+  const feed = active ? `${location.origin}/sub/${active.id}?token=${active.token}` : '';
 
   const copyFeed = async () => {
     if (!feed) return;

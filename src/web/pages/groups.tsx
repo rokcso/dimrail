@@ -36,9 +36,15 @@ function sameSet(a: Set<string>, b: Set<string>): boolean {
   return true;
 }
 
-export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
+export function GroupsPage({
+  token,
+  path,
+  selectedId,
+  onNavigate,
+  onReplace,
+  onReject,
+}: PageProps) {
   const queryClient = useQueryClient();
-  const [selected, setSelected] = useState<string | null>(null);
   const [nameDraft, setNameDraft] = useState('');
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [savedKeys, setSavedKeys] = useState<Set<string>>(new Set());
@@ -66,18 +72,23 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
   });
 
   const groups = list.data?.groups ?? [];
-  const active = groups.find((group) => group.id === selected) ?? null;
+  const active = groups.find((group) => group.id === selectedId) ?? null;
   const nodes = nodesQuery.data?.nodes ?? [];
 
   const detail = useQuery({
-    queryKey: ['group', selected],
-    queryFn: () => api.get<NodeGroupDetail>(`/api/groups/${selected}`, token),
-    enabled: Boolean(selected),
+    queryKey: ['group', selectedId],
+    queryFn: () => api.get<NodeGroupDetail>(`/api/groups/${selectedId}`, token),
+    enabled: Boolean(selectedId),
     retry: false,
     refetchOnWindowFocus: false,
   });
 
-  const loaded = detail.data && detail.data.id === selected ? detail.data : null;
+  const loaded = detail.data && detail.data.id === selectedId ? detail.data : null;
+
+  useEffect(() => {
+    if (list.isPending || !selectedId || active) return;
+    onReplace('/admin/groups');
+  }, [list.isPending, selectedId, active, onReplace]);
 
   useEffect(() => {
     if (!loaded) return;
@@ -126,8 +137,8 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
       setAdding(false);
       setNewName('');
       setError('');
-      setSelected(group.id);
       await refreshGroups();
+      onNavigate(`/admin/groups/${group.id}`);
     },
     onError: onMutationError,
   });
@@ -153,7 +164,6 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
     mutationFn: (id: string) => api.del<{ ok: boolean }>(`/api/groups/${id}`, token),
     onSuccess: async (_data, id) => {
       queryClient.removeQueries({ queryKey: ['group', id] });
-      if (selected === id) setSelected(null);
       setError('');
       await refreshGroups();
     },
@@ -162,12 +172,12 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
 
   const saveMembers = useMutation({
     mutationFn: (members: NodeGroupMember[]) =>
-      api.put<{ ok: boolean; nodeCount: number }>(`/api/groups/${selected}/nodes`, token, {
+      api.put<{ ok: boolean; nodeCount: number }>(`/api/groups/${selectedId}/nodes`, token, {
         members,
       }),
     onSuccess: async (_data, members) => {
       setSavedKeys(new Set(members.map(nodeKey)));
-      queryClient.setQueryData<NodeGroupDetail>(['group', selected], (prev) =>
+      queryClient.setQueryData<NodeGroupDetail>(['group', selectedId], (prev) =>
         prev ? { ...prev, members, nodeCount: members.length, updatedAt: Date.now() } : prev,
       );
       setError('');
@@ -204,9 +214,9 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
   }, [nodes, airportFilter, typeFilter, search]);
 
   const selectGroup = (id: string) => {
-    if (id === selected) return;
+    if (id === selectedId) return;
     if (dirty && !window.confirm('当前节点组的选择还没保存，切换后会丢失。继续？')) return;
-    setSelected(id);
+    onNavigate(`/admin/groups/${id}`);
   };
 
   const toggle = (node: NodeView) => {
@@ -293,7 +303,7 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
         {groups.map((group) => {
-          const isActive = group.id === selected;
+          const isActive = group.id === selectedId;
           return (
             <div
               key={group.id}

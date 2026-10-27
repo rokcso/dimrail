@@ -29,7 +29,7 @@
 - 节点一行一条存在 `airport_nodes` 里，不是机场行上的一个大字段 —— 真实机场几百个节点，
   整份 JSON 塞进去会超出 D1 单值上限（线上直接 `internal error`，本地却不报）。
 - 节点只在后台展示 `{名称, 类型, 服务器, 端口, 来源}`，uuid / 密码 / ws-opts 不下发到浏览器。
-- 中转 `/providers/<id>` 直接读缓存：3 小时内不再回源；过期了才重拉，重拉失败就吐旧缓存
+- 中转 `/providers/airports/<id>` 直接读缓存：3 小时内不再回源；过期了才重拉，重拉失败就吐旧缓存
   （响应头 `X-Cache: stale`），机场抽风时订阅不会变空。
 - 拉取失败只记错误、**不清空**已经拿到的节点，页面会标出「上次拉取失败 + 显示的是几点的缓存」。
 - 单个订阅超过 2000 个节点会截断并在页面上标出来。
@@ -49,13 +49,20 @@
 ## 路由
 
 ```
-GET  /admin                       配置列表 + YAML 编辑器（管理口令）
-GET  /admin/groups                节点组：圈选节点
-GET  /admin/settings              设置：基础配置 / 概览（同一地址内切换）
+GET  /admin                       重定向到 /admin/configs
+GET  /admin/configs               配置列表 + YAML 编辑器（管理口令）
+GET  /admin/configs/<id>          选中某份配置
+GET  /admin/airports              机场列表 + 全部节点
+GET  /admin/airports/<id>         选中某个机场
+GET  /admin/groups                节点组列表
+GET  /admin/groups/<id>           选中某个节点组
+GET  /admin/settings              重定向到 /admin/settings/base
+GET  /admin/settings/base         基础配置
+GET  /admin/settings/overview     概览
 
-GET  /p/<id>?token=<token>        Clash 主配置（proxy-providers 由 Worker 注入）
-GET  /providers/<机场 id>?token=   机场订阅中转（D1 缓存，原样回传 proxies）
-GET  /groups/<节点组 id>?token=    节点组中转（按成员读取当前节点）
+GET  /sub/<id>?token=<token>                 Clash 主配置（proxy-providers 由 Worker 注入）
+GET  /providers/airports/<机场 id>?token=    机场订阅中转（D1 缓存，原样回传 proxies）
+GET  /providers/groups/<节点组 id>?token=    节点组中转（按成员读取当前节点）
 
 GET  /api/overview                概览：机场、配置数、节点组数、基础配置状态
 GET  /api/base-config             读取基础配置
@@ -137,7 +144,7 @@ pnpm deploy
 请求订阅时，Worker 读那份配置的 YAML，在运行时把两个标记替换成真实机场（注入用的 token 是**该配置自己的 token**）：
 
 - `# __PROXY_PROVIDERS__` → 每个机场（或配置选中的那个节点组）一个 `proxy-providers` 条目，
-  URL 指向本 Worker 的 `/providers/<机场 id>` 或 `/groups/<节点组 id>`
+  URL 指向本 Worker 的 `/providers/airports/<机场 id>` 或 `/providers/groups/<节点组 id>`
 - `__PROVIDER_NAMES__` → 来源名列表（YAML key 用名字，一律加引号）
 
 所以配置里不会出现真实机场链接，新增机场也只要在后台加一行。
@@ -167,8 +174,8 @@ scripts/generate.mjs 模板编译
 ## 安全
 
 - 管理口令用常量时间比较，只存在 localStorage；订阅 token 与它分离，订阅链接泄露不影响写入权限。
-- 每份配置一条 token，`/providers/<机场 id>` 与 `/groups/<节点组 id>` 只校验这个 token
-  属于任意一份配置。
+- 每份配置一条 token，`/providers/airports/<机场 id>` 与 `/providers/groups/<节点组 id>`
+  只校验这个 token 属于任意一份配置。
 - 机场 URL 只存在 D1 里，不会出现在下发给客户端的配置中；节点凭据也只留在 Worker 侧，
   后台列表拿到的字段是裁剪过的。
 - 未配置 `ADMIN_TOKEN` 时配置接口返回 503。

@@ -9,9 +9,9 @@ const sources: ProviderSource[] = [
 describe('buildProvidersYaml', () => {
   it('机场与节点组走各自的 URL 和缓存文件', () => {
     const yaml = buildProvidersYaml(sources, 'https://sub.example.com', 'tok');
-    expect(yaml).toContain('url: https://sub.example.com/providers/a1?token=tok');
+    expect(yaml).toContain('url: https://sub.example.com/providers/airports/a1?token=tok');
     expect(yaml).toContain('path: ./providers/a1.yaml');
-    expect(yaml).toContain('url: https://sub.example.com/groups/g1?token=tok');
+    expect(yaml).toContain('url: https://sub.example.com/providers/groups/g1?token=tok');
     expect(yaml).toContain('path: ./providers/group-g1.yaml');
   });
 

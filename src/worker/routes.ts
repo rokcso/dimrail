@@ -7,13 +7,13 @@ export type Route =
   | { kind: 'assets' }
   | { kind: 'notFound' };
 
-const CONFIG_PATH = /^\/p\/([A-Za-z0-9_-]{1,32})$/;
-const PROVIDER_PATH = /^\/providers\/([^/]+)$/;
-const GROUP_PATH = /^\/groups\/([^/]+)$/;
+const CONFIG_PATH = /^\/sub\/([A-Za-z0-9_-]{1,32})$/;
+const AIRPORT_PROVIDER_PATH = /^\/providers\/airports\/([^/]+)$/;
+const GROUP_PROVIDER_PATH = /^\/providers\/groups\/([^/]+)$/;
 
 /**
  * 纯路径解析，不碰 env 与网络，方便单测。
- * 顺序有意义：/api 与 /p、/providers 归 Worker，其余（/admin、静态资源）交给 assets。
+ * 顺序有意义：/api、/sub、/providers 归 Worker，其余（/admin、静态资源）交给 assets。
  */
 export function parseRoute(pathname: string): Route {
   const path = pathname.replace(/\/+$/, '') || '/';
@@ -21,30 +21,34 @@ export function parseRoute(pathname: string): Route {
   if (path === '/') return { kind: 'root' };
   if (path === '/api' || path.startsWith('/api/')) return { kind: 'api', path };
 
-  if (path === '/p' || path.startsWith('/p/')) {
+  if (path === '/sub' || path.startsWith('/sub/')) {
     const match = CONFIG_PATH.exec(path);
     return match?.[1] ? { kind: 'config', id: match[1] } : { kind: 'notFound' };
   }
 
   if (path === '/providers' || path.startsWith('/providers/')) {
-    const match = PROVIDER_PATH.exec(path);
-    if (!match?.[1]) return { kind: 'notFound' };
-    try {
-      return { kind: 'provider', id: decodeURIComponent(match[1]) };
-    } catch {
-      return { kind: 'notFound' };
+    const airport = AIRPORT_PROVIDER_PATH.exec(path);
+    if (airport?.[1]) {
+      const id = decode(airport[1]);
+      return id ? { kind: 'provider', id } : { kind: 'notFound' };
     }
-  }
 
-  if (path === '/groups' || path.startsWith('/groups/')) {
-    const match = GROUP_PATH.exec(path);
-    if (!match?.[1]) return { kind: 'notFound' };
-    try {
-      return { kind: 'group', id: decodeURIComponent(match[1]) };
-    } catch {
-      return { kind: 'notFound' };
+    const group = GROUP_PROVIDER_PATH.exec(path);
+    if (group?.[1]) {
+      const id = decode(group[1]);
+      return id ? { kind: 'group', id } : { kind: 'notFound' };
     }
+
+    return { kind: 'notFound' };
   }
 
   return { kind: 'assets' };
+}
+
+function decode(value: string): string | null {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
 }

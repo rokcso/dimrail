@@ -96,7 +96,7 @@ export default {
       case 'group':
         return handleGroup(env, url, route.id);
       case 'root':
-        return redirect('/admin');
+        return redirect('/admin/configs');
       case 'notFound':
         return text('Not found', 404);
       default:

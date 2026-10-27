@@ -34,7 +34,7 @@ export function buildProvidersYaml(
 ): string {
   return sources
     .map((source) => {
-      const segment = source.kind === 'group' ? 'groups' : 'providers';
+      const segment = `providers/${source.kind === 'group' ? 'groups' : 'airports'}`;
       const file = source.kind === 'group' ? `group-${source.id}` : source.id;
       return [
         `  ${yamlKey(source.name)}:`,
