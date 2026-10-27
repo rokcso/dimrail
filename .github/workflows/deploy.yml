@@ -40,8 +40,6 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           secrets: |
-            PROVIDERS_JSON
             ADMIN_TOKEN
         env:
-          PROVIDERS_JSON: ${{ secrets.PROVIDERS_JSON }}
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}

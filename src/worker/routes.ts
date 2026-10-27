@@ -2,7 +2,7 @@ export type Route =
   | { kind: 'root' }
   | { kind: 'api'; path: string }
   | { kind: 'config'; id: string }
-  | { kind: 'provider'; name: string }
+  | { kind: 'provider'; id: string }
   | { kind: 'assets' }
   | { kind: 'notFound' };
 
@@ -28,7 +28,7 @@ export function parseRoute(pathname: string): Route {
     const match = PROVIDER_PATH.exec(path);
     if (!match?.[1]) return { kind: 'notFound' };
     try {
-      return { kind: 'provider', name: decodeURIComponent(match[1]) };
+      return { kind: 'provider', id: decodeURIComponent(match[1]) };
     } catch {
       return { kind: 'notFound' };
     }

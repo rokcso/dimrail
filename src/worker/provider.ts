@@ -1,51 +1,33 @@
-import { parse, stringify } from 'yaml';
+import { stringify } from 'yaml';
+import {
+  type AirportRecord,
+  getAirport,
+  listUserinfo,
+  markError,
+  type ProviderRef,
+  saveNodes,
+} from './airport-store';
 import type { Bindings } from './env';
+import { fetchSubscription } from './subscription';
 
-export type Providers = Record<string, string>;
+/** 中转缓存的有效期：超过就回源，回源失败仍吐旧的。 */
+const CACHE_TTL_MS = 3 * 60 * 60 * 1000;
 
-/** 解析并校验 PROVIDERS_JSON。 */
-export function parseProviders(env: Bindings): Providers {
-  const raw = (env.PROVIDERS_JSON ?? '').trim();
-  if (!raw) throw new Error('未配置 PROVIDERS_JSON');
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error('PROVIDERS_JSON 不是合法 JSON');
-  }
-
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error('PROVIDERS_JSON 必须是 {"机场名":"订阅链接"} 形式的对象');
-  }
-
-  const providers: Providers = {};
-  for (const [name, url] of Object.entries(parsed as Record<string, unknown>)) {
-    if (!/^[A-Za-z0-9_-]{1,32}$/.test(name)) {
-      throw new Error(`机场名不合法（字母/数字/下划线/连字符，最长 32 字符）：${name}`);
-    }
-    if (typeof url !== 'string' || !/^https?:\/\//.test(url)) {
-      throw new Error(`机场 ${name} 的订阅链接无效`);
-    }
-    providers[name] = url;
-  }
-
-  if (Object.keys(providers).length === 0) {
-    throw new Error('PROVIDERS_JSON 至少需要一个机场');
-  }
-  return providers;
+/** 只给普通名字去掉引号，中文和空格一律 quoted，省得 YAML 解析出歧义。 */
+function yamlKey(name: string): string {
+  return /^[A-Za-z0-9_-]+$/.test(name) ? name : JSON.stringify(name);
 }
 
-/** 运行时注入到 proxy-providers 段的 YAML 片段。 */
-export function buildProvidersYaml(providers: Providers, origin: string, token: string): string {
-  return Object.keys(providers)
-    .map((name) =>
+/** 运行时注入到 proxy-providers 段的 YAML 片段。URL 与缓存路径用 id，key 用显示名。 */
+export function buildProvidersYaml(refs: ProviderRef[], origin: string, token: string): string {
+  return refs
+    .map((ref) =>
       [
-        `  ${name}:`,
+        `  ${yamlKey(ref.name)}:`,
         '    type: http',
-        `    url: ${origin}/providers/${encodeURIComponent(name)}?token=${encodeURIComponent(token)}`,
+        `    url: ${origin}/providers/${encodeURIComponent(ref.id)}?token=${encodeURIComponent(token)}`,
         '    interval: 10800',
-        `    path: ./providers/${name}.yaml`,
+        `    path: ./providers/${ref.id}.yaml`,
         '    health-check:',
         '      enable: true',
         '      interval: 300',
@@ -55,59 +37,27 @@ export function buildProvidersYaml(providers: Providers, origin: string, token: 
     .join('\n');
 }
 
-interface UsageCache {
-  data: string;
-  ts: number;
+/** 代理组里 use 的名字列表。 */
+export function providerNames(refs: ProviderRef[]): string {
+  return refs.map((ref) => yamlKey(ref.name)).join(', ');
 }
 
-const USAGE_TTL_MS = 10 * 60 * 1000;
-let usageCache: UsageCache | null = null;
-
 /**
- * 拉取各机场的 subscription-userinfo 并聚合。
- * upload/download/total 求和，expire 取最早。
+ * 聚合各机场的 subscription-userinfo：upload/download/total 求和，expire 取最早。
+ * 数据来自 D1 里的缓存，不再每次请求去问上游。
  */
-export async function aggregatedUserinfo(env: Bindings): Promise<string> {
-  if (usageCache && Date.now() - usageCache.ts < USAGE_TTL_MS) return usageCache.data;
-
-  let providers: Providers;
-  try {
-    providers = parseProviders(env);
-  } catch {
-    return '';
-  }
-
-  const results = await Promise.allSettled(
-    Object.values(providers).map(async (url) => {
-      try {
-        const res = await fetch(url, {
-          headers: { 'User-Agent': 'clash.meta' },
-          redirect: 'follow',
-        });
-        const info = res.ok ? (res.headers.get('subscription-userinfo') ?? '') : '';
-        await res.body?.cancel();
-        return info;
-      } catch {
-        return '';
-      }
-    }),
-  );
-
+export function aggregateUserinfo(values: string[]): string {
   const total = { upload: 0, download: 0, total: 0, expire: 0 };
-  for (const result of results) {
-    if (result.status !== 'fulfilled' || !result.value) continue;
-    const pick = (key: keyof typeof total) => {
-      const match = new RegExp(`${key}=(\\d+)`, 'i').exec(result.value);
-      if (!match?.[1]) return;
+
+  for (const raw of values) {
+    for (const key of ['upload', 'download', 'total', 'expire'] as const) {
+      const match = new RegExp(`${key}=(\\d+)`, 'i').exec(raw);
+      if (!match?.[1]) continue;
       const value = Number(match[1]);
       if (key === 'expire')
         total.expire = total.expire === 0 ? value : Math.min(total.expire, value);
       else total[key] += value;
-    };
-    pick('upload');
-    pick('download');
-    pick('total');
-    pick('expire');
+    }
   }
 
   const parts: string[] = [];
@@ -115,60 +65,71 @@ export async function aggregatedUserinfo(env: Bindings): Promise<string> {
   if (total.download) parts.push(`download=${total.download}`);
   if (total.total) parts.push(`total=${total.total}`);
   if (total.expire) parts.push(`expire=${total.expire}`);
-
-  const data = parts.join('; ');
-  usageCache = { data, ts: Date.now() };
-  return data;
+  return parts.join('; ');
 }
 
-/** 机场订阅中转：裁剪成纯 proxies，透传用量与更新间隔。 */
-export async function relayProvider(name: string, env: Bindings): Promise<Response> {
-  let providers: Providers;
+/** 顶层订阅响应头里的用量，读缓存而不是打上游。 */
+export async function aggregatedUserinfo(env: Bindings): Promise<string> {
   try {
-    providers = parseProviders(env);
-  } catch (err) {
-    return text((err as Error).message, 500);
-  }
-
-  const subUrl = providers[name];
-  if (!subUrl) return text(`未找到机场：${name}`, 404);
-
-  let upstream: Response;
-  try {
-    upstream = await fetch(subUrl, {
-      headers: { 'User-Agent': 'clash.meta' },
-      redirect: 'follow',
-    });
-  } catch (err) {
-    return text(`拉取 ${name} 失败：${(err as Error).message}`, 502);
-  }
-  if (!upstream.ok) return text(`${name} 返回 HTTP ${upstream.status}`, 502);
-
-  const raw = await upstream.text();
-  let body = raw;
-  try {
-    const doc = parse(raw);
-    if (doc && typeof doc === 'object' && Array.isArray((doc as { proxies?: unknown }).proxies)) {
-      body = stringify({ proxies: (doc as { proxies: unknown[] }).proxies }, { lineWidth: 0 });
-    }
+    return aggregateUserinfo(await listUserinfo(env));
   } catch {
-    // 解析失败时原样透传
+    return '';
+  }
+}
+
+/**
+ * 机场订阅中转：缓存新鲜就直接吐，过期回源；回源失败吐旧缓存（X-Cache: stale）。
+ * 效果是机场短时间抽风时，客户端拉到的还是上一次的节点，而不是空。
+ */
+export async function relayProvider(env: Bindings, id: string): Promise<Response> {
+  const airport = await getAirport(env, id);
+  if (!airport) return text('机场不存在', 404);
+  if (!airport.enabled) return text('机场已禁用', 404);
+
+  const hasCache = airport.nodes.length > 0;
+  const age = airport.fetchedAt ? Date.now() - airport.fetchedAt : Number.POSITIVE_INFINITY;
+  if (hasCache && age < CACHE_TTL_MS) return providerYaml(airport, 'hit');
+
+  const result = await fetchSubscription(airport.url);
+  if (result.ok) {
+    await saveNodes(env, id, result.nodes, result.userinfo);
+    return providerYaml(
+      {
+        ...airport,
+        nodes: result.nodes,
+        nodeCount: result.nodes.length,
+        userinfo: result.userinfo ?? airport.userinfo,
+        fetchedAt: Date.now(),
+        error: null,
+        errorAt: null,
+      },
+      'miss',
+    );
   }
 
+  await markError(env, id, result.error);
+  if (hasCache) return providerYaml(airport, 'stale');
+  return text(`拉取 ${airport.name} 失败：${result.error}`, 502);
+}
+
+function providerYaml(airport: AirportRecord, cache: 'hit' | 'miss' | 'stale'): Response {
   const headers: Record<string, string> = {
     'Content-Type': 'text/yaml; charset=utf-8',
     'Cache-Control': 'private, no-store',
+    'Profile-Update-Interval': '10800',
+    'X-Cache': cache,
   };
-  for (const key of ['subscription-userinfo', 'profile-update-interval', 'content-disposition']) {
-    const value = upstream.headers.get(key);
-    if (value) headers[key] = value;
-  }
-  return new Response(body, { status: 200, headers });
+  if (airport.userinfo) headers['Subscription-Userinfo'] = airport.userinfo;
+
+  return new Response(stringify({ proxies: airport.nodes }, { lineWidth: 0 }), {
+    status: 200,
+    headers,
+  });
 }
 
 function text(content: string, status = 200): Response {
   return new Response(content, {
     status,
-    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
   });
 }

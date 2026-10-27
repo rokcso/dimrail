@@ -11,7 +11,7 @@
 
 个人 Clash 订阅中转：把多个机场聚合成一个 provider 集合，下发自己的分流配置。
 
-配置存在 D1，在 `/admin` 里编辑保存后立即生效，不需要重新部署。
+配置和机场订阅都存在 D1，在 `/admin` 里改完立即生效，不需要重新部署。
 
 ## 多份配置
 
@@ -21,6 +21,17 @@
 新建配置时会把**当时的基础配置文本复制一份**进去，之后改基础配置不影响已经存在的配置。
 每份配置有自己的 token，泄漏只影响那一份，也可以就地重新生成链接。
 
+## 机场
+
+机场（订阅链接）也在 `/admin/airports` 里管理：贴链接 → 立刻拉一次 → 节点存进 D1。
+
+- 节点只在后台展示 `{名称, 类型, 服务器, 端口, 来源}`，uuid / 密码 / ws-opts 不下发到浏览器。
+- 中转 `/providers/<id>` 直接读缓存：3 小时内不再回源；过期了才重拉，重拉失败就吐旧缓存
+  （响应头 `X-Cache: stale`），机场抽风时订阅不会变空。
+- 拉取失败只记错误、**不清空**已经拿到的节点，页面会标出「上次拉取失败 + 显示的是几点的缓存」。
+- 单个订阅超过 2000 个节点会截断并在页面上标出来。
+- 只支持 Clash 格式（`proxies:` 数组），v2ray / base64 订阅会直接报错，不会猜。
+
 ## 路由
 
 ```
@@ -28,7 +39,7 @@ GET  /admin                       配置列表 + YAML 编辑器（管理口令�
 GET  /admin/settings              基础配置与概览
 
 GET  /p/<id>?token=<token>        Clash 主配置（proxy-providers 由 Worker 注入）
-GET  /providers/<机场名>?token=    机场订阅中转（裁剪成 proxies）
+GET  /providers/<机场 id>?token=   机场订阅中转（D1 缓存，原样回传 proxies）
 
 GET  /api/overview                概览：机场、配置数、基础配置状态
 GET  /api/base-config             读取基础配置
@@ -40,23 +51,36 @@ GET  /api/configs/<id>            读取一份配置
 PUT  /api/configs/<id>            保存（YAML 和/或名字）
 DELETE /api/configs/<id>          删除
 POST /api/configs/<id>/token      重新生成订阅 token
+
+GET  /api/airports                机场列表
+POST /api/airports                添加机场（顺手拉一次）
+PATCH /api/airports/<id>          改名 / 换链接 / 启停
+DELETE /api/airports/<id>         删除
+POST /api/airports/<id>/refresh   重新拉取单个机场
+POST /api/airports/refresh        重新拉取所有启用的机场
+POST /api/airports/import-env     把 PROVIDERS_JSON 里的机场导入数据库
+GET  /api/nodes                   所有节点（已裁剪，只给展示字段）
 ```
 
 ## 依赖的 Secret
 
 | 名称 | 用途 |
 |---|---|
-| `PROVIDERS_JSON` | 机场映射：`{"airport-a":"https://sub.example/link/xxx"}` |
 | `ADMIN_TOKEN` | `/admin` 与 `/api/*` 的管理口令 |
 
-订阅链接的 token 不再走 Secret：每份配置一条，存在 D1 里，可以在后台查看和重新生成。
+机场订阅链接存在 D1 里，在 `/admin/airports` 添加。
+
+订阅链接的 token 也不再走 Secret：每份配置一条，存在 D1 里，可以在后台查看和重新生成。
+
+`PROVIDERS_JSON` 只在迁移老数据时用得上：如果这个变量还在，机场页顶部会出现一条
+「还有 N 个机场没搬进数据库」，点「导入」就搬进 D1，之后这个变量可以删掉。
 
 ## 本地开发
 
 ```bash
 pnpm install
-cp .dev.vars.example .dev.vars      # 填入两个变量
-pnpm db:migrate:local               # 建 base_config / configs 表
+cp .dev.vars.example .dev.vars      # 填 ADMIN_TOKEN
+pnpm db:migrate:local               # 建 base_config / configs / airports 表
 pnpm dev
 ```
 
@@ -71,7 +95,6 @@ pnpm dev
 wrangler d1 create dimrail           # 把 database_id 填进 wrangler.jsonc
 wrangler d1 migrations apply dimrail --remote
 
-wrangler secret put PROVIDERS_JSON
 wrangler secret put ADMIN_TOKEN
 
 pnpm deploy
@@ -91,10 +114,10 @@ pnpm deploy
 
 请求订阅时，Worker 读那份配置的 YAML，在运行时把两个标记替换成真实机场（注入用的 token 是**该配置自己的 token**）：
 
-- `# __PROXY_PROVIDERS__` → 每个机场一个 `proxy-providers` 条目，URL 指向本 Worker 的 `/providers/<机场名>`
-- `__PROVIDER_NAMES__` → 机场名列表
+- `# __PROXY_PROVIDERS__` → 每个机场一个 `proxy-providers` 条目，URL 指向本 Worker 的 `/providers/<机场 id>`
+- `__PROVIDER_NAMES__` → 机场名列表（YAML key 用名字，非 ASCII 名会自动加引号）
 
-所以配置里不会出现真实机场链接，新增机场也只需要改 `PROVIDERS_JSON`。
+所以配置里不会出现真实机场链接，新增机场也只要在后台加一行。
 
 ## 编辑器的校验
 
@@ -108,8 +131,8 @@ pnpm deploy
 
 ```
 src/
-├── worker/          Worker：订阅、provider 中转、配置读写
-├── web/             React SPA：配置列表与设置页
+├── worker/          Worker：订阅、provider 中转、机场与配置读写
+├── web/             React SPA：配置列表、机场、设置
 └── shared/          前后端共享的 Zod schema 与 DTO
 configs/clash.yaml   模板源
 migrations/          D1 迁移
@@ -121,8 +144,9 @@ scripts/generate.mjs 模板编译
 ## 安全
 
 - 管理口令用常量时间比较，只存在 localStorage；订阅 token 与它分离，订阅链接泄露不影响写入权限。
-- 每份配置一条 token，`/providers/<机场名>` 只校验这个 token 属于任意一份配置。
-- 机场 URL 只存在 Secret 与 D1 的 provider 注入结果里，不会出现在下发给客户端的配置中。
+- 每份配置一条 token，`/providers/<机场 id>` 只校验这个 token 属于任意一份配置。
+- 机场 URL 只存在 D1 里，不会出现在下发给客户端的配置中；节点凭据也只留在 Worker 侧，
+  后台列表拿到的字段是裁剪过的。
 - 未配置 `ADMIN_TOKEN` 时配置接口返回 503。
 
 ## License

@@ -1,10 +1,11 @@
 import { CONFIG_TEMPLATE } from '../generated/config';
 import type { ConfigSummary } from '../shared/schema';
 import type { Bindings } from './env';
+import { generateId, generateToken } from './ids';
+
+// 保持对外导出，测试与调用方仍从 config-store 取
 
 const BASE_ID = 'base';
-/** 去掉 l/i/o/0/1，链接里的 id 好念也好抄。 */
-const ID_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789';
 
 export interface LoadedBase {
   yaml: string;
@@ -17,24 +18,11 @@ export interface ConfigRecord extends ConfigSummary {
   yaml: string;
 }
 
+export { generateId, generateToken };
+
 function requireDb(env: Bindings): D1Database {
   if (!env.DB) throw new Error('未绑定 D1（env.DB）');
   return env.DB;
-}
-
-export function generateId(length = 8): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(length));
-  let id = '';
-  for (const byte of bytes) id += ID_ALPHABET.charAt(byte % ID_ALPHABET.length);
-  return id;
-}
-
-/** 订阅密钥：18 字节随机 → 36 位十六进制。 */
-export function generateToken(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(18));
-  let token = '';
-  for (const byte of bytes) token += byte.toString(16).padStart(2, '0');
-  return token;
 }
 
 /* ---------------- 基础配置 ---------------- */

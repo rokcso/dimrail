@@ -1,14 +1,36 @@
 import {
+  type AirportListResponse,
+  type AirportSummary,
+  airportCreateSchema,
+  airportUpdateSchema,
   type BaseConfigResponse,
   type ConfigDetail,
   type ConfigListResponse,
   configCreateSchema,
   configUpdateSchema,
+  type NodesResponse,
+  type NodeView,
   type OverviewResponse,
+  type RefreshResponse,
   type SaveResponse,
   type TokenResponse,
   yamlPayloadSchema,
 } from '../shared/schema';
+import {
+  countAirports,
+  countFailed,
+  countNodes,
+  createAirport,
+  deleteAirport,
+  getAirport,
+  listAirports,
+  listNodeSources,
+  listProviderRefs,
+  markError,
+  nameTaken,
+  saveNodes,
+  updateAirport,
+} from './airport-store';
 import { checkAdmin, timingSafeEqual } from './auth';
 import {
   type ConfigRecord,
@@ -25,18 +47,15 @@ import {
   updateConfig,
 } from './config-store';
 import type { Bindings } from './env';
-import {
-  aggregatedUserinfo,
-  buildProvidersYaml,
-  type Providers,
-  parseProviders,
-  relayProvider,
-} from './provider';
+import { parseLegacyProviders } from './legacy';
+import { aggregatedUserinfo, buildProvidersYaml, providerNames, relayProvider } from './provider';
 import { parseRoute } from './routes';
+import { fetchSubscription, toNodeViewFields } from './subscription';
 import { validateConfig } from './validate';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8' };
-const ID_PATTERN = /^\/api\/configs\/([A-Za-z0-9_-]{1,32})(\/token)?$/;
+const CONFIG_ID = /^\/api\/configs\/([A-Za-z0-9_-]{1,32})(\/token)?$/;
+const AIRPORT_ID = /^\/api\/airports\/([A-Za-z0-9_-]{1,32})(\/refresh)?$/;
 
 export default {
   async fetch(request: Request, env: Bindings): Promise<Response> {
@@ -49,7 +68,7 @@ export default {
       case 'config':
         return serveConfig(request, env, url, route.id);
       case 'provider':
-        return handleProvider(env, url, route.name);
+        return handleProvider(env, url, route.id);
       case 'root':
         return redirect('/admin');
       case 'notFound':
@@ -72,27 +91,27 @@ async function serveConfig(
   if (!token) return text('缺少订阅密钥：链接需要带 ?token=', 401);
 
   let record: ConfigRecord | null;
-  let providers: Providers;
+  let refs: Awaited<ReturnType<typeof listProviderRefs>>;
   try {
     record = await getConfig(env, id);
     if (!record) return text('配置不存在', 404);
     if (!timingSafeEqual(token, record.token)) return text('订阅链接无效', 401);
-    providers = parseProviders(env);
+    refs = await listProviderRefs(env);
   } catch (err) {
     return text(`读取配置失败：${errorMessage(err)}`, 500);
   }
 
-  const names = Object.keys(providers);
+  if (refs.length === 0) {
+    return text('还没有可用的机场：先到 /admin/airports 添加订阅链接', 503);
+  }
+
   const body = [
     '# Dimrail',
     `# 配置: ${record.name}`,
-    `# 机场: ${names.join(', ')}`,
+    `# 机场: ${refs.map((ref) => ref.name).join(', ')}`,
     record.yaml
-      .replaceAll(
-        '  # __PROXY_PROVIDERS__',
-        buildProvidersYaml(providers, url.origin, record.token),
-      )
-      .replaceAll('__PROVIDER_NAMES__', names.join(', ')),
+      .replaceAll('  # __PROXY_PROVIDERS__', buildProvidersYaml(refs, url.origin, record.token))
+      .replaceAll('__PROVIDER_NAMES__', providerNames(refs)),
   ].join('\n');
 
   const headers: Record<string, string> = {
@@ -113,7 +132,7 @@ async function serveConfig(
   return new Response(body, { status: 200, headers });
 }
 
-async function handleProvider(env: Bindings, url: URL, name: string): Promise<Response> {
+async function handleProvider(env: Bindings, url: URL, id: string): Promise<Response> {
   const token = url.searchParams.get('token') ?? '';
   if (!token) return text('缺少订阅密钥', 401);
 
@@ -125,7 +144,7 @@ async function handleProvider(env: Bindings, url: URL, name: string): Promise<Re
   }
   if (!valid) return text('订阅链接无效', 401);
 
-  return relayProvider(name, env);
+  return relayProvider(env, id);
 }
 
 /* ---------------- 管理 API ---------------- */
@@ -147,17 +166,18 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
   if (path === '/api/overview') {
     if (method !== 'GET') return methodNotAllowed();
     const base = await loadBase(env);
-    let providers: OverviewResponse['providers'];
-    try {
-      providers = { names: Object.keys(parseProviders(env)), error: null };
-    } catch (err) {
-      providers = { names: [], error: errorMessage(err) };
-    }
+    const [airportCount, nodeCount, failed, configCount] = await Promise.all([
+      countAirports(env),
+      countNodes(env),
+      countFailed(env),
+      countConfigs(env),
+    ]);
     return json({
-      providers,
+      airports: { count: airportCount, nodeCount, failed },
+      legacyEnvCount: Object.keys(parseLegacyProviders(env)).length,
       adminTokenConfigured: Boolean(env.ADMIN_TOKEN?.trim()),
       base: { seeded: base.seeded, updatedAt: base.updatedAt },
-      configCount: await countConfigs(env),
+      configCount,
     } satisfies OverviewResponse);
   }
 
@@ -201,7 +221,119 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
     return methodNotAllowed();
   }
 
-  const match = ID_PATTERN.exec(path);
+  if (path === '/api/airports') {
+    if (method === 'GET') {
+      return json({
+        airports: await listAirports(env),
+        legacyEnvCount: Object.keys(parseLegacyProviders(env)).length,
+      } satisfies AirportListResponse);
+    }
+    if (method === 'POST') {
+      const payload = airportCreateSchema.safeParse(await readJson(request));
+      if (!payload.success) return json({ error: firstIssue(payload.error) }, 400);
+      if (await nameTaken(env, payload.data.name)) {
+        return json({ error: `已经有一个叫「${payload.data.name}」的机场` }, 409);
+      }
+
+      // 建完立刻拉一次，用户当场就知道链接对不对。
+      const created = await createAirport(env, payload.data);
+      return json(await refreshAirport(env, created), 201);
+    }
+    return methodNotAllowed();
+  }
+
+  if (path === '/api/airports/refresh') {
+    if (method !== 'POST') return methodNotAllowed();
+    const enabled = (await listAirports(env)).filter((airport) => airport.enabled);
+    const results = await Promise.all(enabled.map((airport) => refreshAirport(env, airport)));
+    const failed = results.filter((airport) => airport.error).length;
+    return json({
+      refreshed: results.length - failed,
+      failed,
+      airports: await listAirports(env),
+    } satisfies RefreshResponse);
+  }
+
+  if (path === '/api/airports/import-env') {
+    if (method !== 'POST') return methodNotAllowed();
+    const legacy = parseLegacyProviders(env);
+    const existing = new Set((await listAirports(env)).map((airport) => airport.name));
+    let imported = 0;
+    let skipped = 0;
+
+    for (const [name, url] of Object.entries(legacy)) {
+      if (existing.has(name)) {
+        skipped += 1;
+        continue;
+      }
+      await createAirport(env, { name, url });
+      imported += 1;
+    }
+    return json({ imported, skipped, total: Object.keys(legacy).length }, 201);
+  }
+
+  if (path === '/api/nodes') {
+    if (method !== 'GET') return methodNotAllowed();
+    const [sources, airports] = await Promise.all([listNodeSources(env), listAirports(env)]);
+    const nodes: NodeView[] = [];
+
+    for (const source of sources) {
+      for (const node of source.nodes) {
+        nodes.push({
+          ...toNodeViewFields(node),
+          airportId: source.id,
+          airportName: source.name,
+        });
+      }
+    }
+
+    const enabled = airports.filter((airport) => airport.enabled);
+    const stamps = enabled
+      .map((airport) => airport.fetchedAt)
+      .filter((value): value is number => typeof value === 'number');
+
+    return json({
+      nodes,
+      fetchedAt: stamps.length ? Math.max(...stamps) : null,
+      airports: {
+        total: enabled.length,
+        failed: enabled.filter((airport) => airport.error).length,
+      },
+    } satisfies NodesResponse);
+  }
+
+  const airportMatch = AIRPORT_ID.exec(path);
+  if (airportMatch?.[1]) {
+    const id = airportMatch[1];
+
+    if (airportMatch[2]) {
+      if (method !== 'POST') return methodNotAllowed();
+      const airport = await getAirport(env, id);
+      if (!airport) return json({ error: '机场不存在' }, 404);
+      return json(await refreshAirport(env, airport));
+    }
+
+    if (method === 'PATCH') {
+      const payload = airportUpdateSchema.safeParse(await readJson(request));
+      if (!payload.success) return json({ error: firstIssue(payload.error) }, 400);
+      if (payload.data.name && (await nameTaken(env, payload.data.name, id))) {
+        return json({ error: `已经有一个叫「${payload.data.name}」的机场` }, 409);
+      }
+
+      const updated = await updateAirport(env, id, payload.data);
+      if (!updated) return json({ error: '机场不存在' }, 404);
+      return json(updated);
+    }
+
+    if (method === 'DELETE') {
+      if (!(await deleteAirport(env, id))) return json({ error: '机场不存在' }, 404);
+      return json({ ok: true });
+    }
+
+    return methodNotAllowed();
+  }
+
+  const match = CONFIG_ID.exec(path);
   const id = match?.[1];
   if (!id) return json({ error: 'Not found' }, 404);
 
@@ -240,6 +372,27 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
   }
 
   return methodNotAllowed();
+}
+
+/** 拉一次并落库，返回刷新后的机场（失败时带 error，不动旧节点）。 */
+async function refreshAirport(env: Bindings, airport: AirportSummary): Promise<AirportSummary> {
+  const result = await fetchSubscription(airport.url);
+
+  if (result.ok) {
+    await saveNodes(env, airport.id, result.nodes, result.userinfo);
+    return {
+      ...airport,
+      nodeCount: result.nodes.length,
+      userinfo: result.userinfo ?? airport.userinfo,
+      fetchedAt: Date.now(),
+      error: null,
+      errorAt: null,
+      updatedAt: Date.now(),
+    };
+  }
+
+  await markError(env, airport.id, result.error);
+  return { ...airport, error: result.error, errorAt: Date.now() };
 }
 
 /* ---------------- 静态资源 ---------------- */
@@ -283,6 +436,11 @@ function methodNotAllowed(): Response {
 
 async function readJson(request: Request): Promise<unknown> {
   return request.json().catch(() => null);
+}
+
+/** zod 的报错里第一条就是给用户看的，中文文案走这里。 */
+function firstIssue(error: { issues: { message: string }[] }): string {
+  return error.issues[0]?.message ?? '请求格式错误';
 }
 
 function errorMessage(err: unknown): string {

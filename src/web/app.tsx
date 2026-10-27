@@ -4,14 +4,18 @@ import type { ConfigListResponse } from '@/shared/schema';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
 import { ApiError, api } from './lib/api';
+import { AirportsPage } from './pages/airports';
 import { ConfigsPage } from './pages/configs';
 import { SettingsPage } from './pages/settings';
 
 const TOKEN_KEY = 'dimrail-admin-token';
 const SETTINGS_PATH = '/admin/settings';
+const AIRPORTS_PATH = '/admin/airports';
 
 function normalizePath(pathname: string): string {
-  return pathname === SETTINGS_PATH ? SETTINGS_PATH : '/admin';
+  if (pathname === SETTINGS_PATH) return SETTINGS_PATH;
+  if (pathname === AIRPORTS_PATH) return AIRPORTS_PATH;
+  return '/admin';
 }
 
 export function App() {
@@ -47,7 +51,9 @@ export function App() {
   }
 
   const props = { token, path, onNavigate: navigate, onReject: reject };
-  return path === SETTINGS_PATH ? <SettingsPage {...props} /> : <ConfigsPage {...props} />;
+  if (path === SETTINGS_PATH) return <SettingsPage {...props} />;
+  if (path === AIRPORTS_PATH) return <AirportsPage {...props} />;
+  return <ConfigsPage {...props} />;
 }
 
 function Gate({ onAccept }: { onAccept: (token: string) => void }) {

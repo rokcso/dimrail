@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import type { BaseConfigResponse, OverviewResponse, SaveResponse } from '@/shared/schema';
 import { AppShell } from '../components/app-shell';
 import { LazyYamlEditor } from '../components/lazy-editor';
@@ -155,7 +155,21 @@ export function SettingsPage({ token, path, onNavigate, onReject }: PageProps) {
       />
 
       <div className="flex shrink-0 flex-wrap items-center gap-x-7 gap-y-1.5 border-b-[0.5px] border-border px-6 py-2.5 text-[11px]">
-        <Field label="机场" value={info ? info.providers.names.join('、') || '未配置' : '—'} />
+        <Field
+          label="机场"
+          value={
+            info ? (
+              <>
+                {`${info.airports.count} 个 · ${info.airports.nodeCount} 个节点`}
+                {info.airports.failed > 0 && (
+                  <span className="text-danger">{` · ${info.airports.failed} 个失败`}</span>
+                )}
+              </>
+            ) : (
+              '—'
+            )
+          }
+        />
         <Field label="配置" value={info ? `${info.configCount} 份` : '—'} />
         <Field
           label="基础配置"
@@ -172,8 +186,10 @@ export function SettingsPage({ token, path, onNavigate, onReject }: PageProps) {
           value={info ? (info.adminTokenConfigured ? '已配置' : '未配置') : '—'}
           danger={info ? !info.adminTokenConfigured : false}
         />
-        {info?.providers.error && (
-          <span className="text-danger">PROVIDERS_JSON：{info.providers.error}</span>
+        {info && info.legacyEnvCount > 0 && (
+          <span className="text-warning">
+            PROVIDERS_JSON 里还有 {info.legacyEnvCount} 个机场没导入，去「机场」页一键导入
+          </span>
         )}
       </div>
 
@@ -219,7 +235,7 @@ export function SettingsPage({ token, path, onNavigate, onReject }: PageProps) {
   );
 }
 
-function Field({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
+function Field({ label, value, danger }: { label: string; value: ReactNode; danger?: boolean }) {
   return (
     <span className="flex items-center gap-1.5">
       <span className="text-muted-foreground">{label}</span>

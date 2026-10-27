@@ -1,9 +1,10 @@
-import { RiFileListLine, RiSettings3Line } from '@remixicon/react';
+import { RiFileListLine, RiServerLine, RiSettings3Line } from '@remixicon/react';
 import type { ReactNode } from 'react';
 import { cn } from '@/web/lib/utils';
 
 const TABS = [
   { to: '/admin', label: '配置', icon: RiFileListLine },
+  { to: '/admin/airports', label: '机场', icon: RiServerLine },
   { to: '/admin/settings', label: '设置', icon: RiSettings3Line },
 ];
 

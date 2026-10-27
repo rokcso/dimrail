@@ -26,8 +26,9 @@ describe('parseRoute', () => {
   });
 
   it('机场中转路径', () => {
-    expect(parseRoute('/providers/airport-a')).toEqual({ kind: 'provider', name: 'airport-a' });
-    expect(parseRoute('/providers/airport-a/')).toEqual({ kind: 'provider', name: 'airport-a' });
+    expect(parseRoute('/providers/airport-a')).toEqual({ kind: 'provider', id: 'airport-a' });
+    expect(parseRoute('/providers/airport-a/')).toEqual({ kind: 'provider', id: 'airport-a' });
+    expect(parseRoute('/providers/k3m9x2qa')).toEqual({ kind: 'provider', id: 'k3m9x2qa' });
     expect(parseRoute('/providers')).toEqual({ kind: 'notFound' });
   });
 

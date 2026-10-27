@@ -1,4 +1,4 @@
-# 机场订阅映射：{"airport-a":"https://sub.example/link/xxx"}
-PROVIDERS_JSON='{"airport-a":"https://example.com/sub?client=clashmetasimple"}'
+# 可选：只用来把老数据一次性导入 D1，机场现在在 /admin/airports 里管
+# PROVIDERS_JSON='{"airport-a":"https://example.com/sub?client=clashmetasimple"}'
 # 管理口令：/admin 与 /api/*
 ADMIN_TOKEN='dev-admin-token'
