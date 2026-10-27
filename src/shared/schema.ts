@@ -13,21 +13,21 @@ export const configCreateSchema = z.object({
 
 /**
  * 改内容、改名、换节点来源共用一个端点：都可选，但不能都空。
- * groupId 用 null 表示「全部节点」，与「没传这个字段」区分开。
+ * poolId 用 null 表示「全部节点」，与「没传这个字段」区分开。
  */
 export const configUpdateSchema = z
   .object({
     yaml: z.string().min(1).max(YAML_MAX).optional(),
     name: z.string().trim().min(1).max(NAME_MAX).optional(),
-    groupId: z.string().min(1).max(32).nullable().optional(),
+    poolId: z.string().min(1).max(32).nullable().optional(),
   })
   .refine(
-    (value) => value.yaml !== undefined || value.name !== undefined || value.groupId !== undefined,
+    (value) => value.yaml !== undefined || value.name !== undefined || value.poolId !== undefined,
     { message: '没有要保存的内容' },
   );
 
 /**
- * 机场名 / 节点组名同时是 YAML 里的 key、代理组 use 的名字、页面上的显示名，
+ * 机场名 / 节点池名同时是 YAML 里的 key、代理组 use 的名字、页面上的显示名，
  * 所以只放行文字、数字、空格和 - _ . —— 冒号、逗号、斜杠这些会破坏 YAML 或链接。
  */
 export const DISPLAY_NAME_PATTERN = /^[\p{L}\p{N}_.\- ]+$/u;
@@ -40,7 +40,7 @@ export const displayNameSchema = z
   .regex(DISPLAY_NAME_PATTERN, '名称只能用文字、数字、空格和 - _ .');
 
 export const airportNameSchema = displayNameSchema;
-export const nodeGroupNameSchema = displayNameSchema;
+export const nodePoolNameSchema = displayNameSchema;
 
 export const airportUrlSchema = z
   .string()
@@ -64,21 +64,21 @@ export const airportUpdateSchema = z
     { message: '没有要修改的内容' },
   );
 
-/* ---------------- 节点组 ---------------- */
+/* ---------------- 节点池 ---------------- */
 
-export const nodeGroupCreateSchema = z.object({ name: nodeGroupNameSchema });
+export const nodePoolCreateSchema = z.object({ name: nodePoolNameSchema });
 
-export const nodeGroupUpdateSchema = z.object({ name: nodeGroupNameSchema });
+export const nodePoolUpdateSchema = z.object({ name: nodePoolNameSchema });
 
 /** 成员按（机场 + 节点名 + 类型）引用，与 /api/nodes 里的展示字段一致。 */
-export const nodeGroupMemberSchema = z.object({
+export const nodePoolMemberSchema = z.object({
   airportId: z.string().min(1).max(32),
   name: z.string().max(500),
   type: z.string().max(64),
 });
 
-export const nodeGroupMembersPayloadSchema = z.object({
-  members: z.array(nodeGroupMemberSchema).max(10_000),
+export const nodePoolMembersPayloadSchema = z.object({
+  members: z.array(nodePoolMemberSchema).max(10_000),
 });
 
 /** 基础配置。seeded 表示 D1 里还没有，读的是构建期模板。 */
@@ -97,8 +97,8 @@ export interface ConfigSummary {
   id: string;
   name: string;
   token: string;
-  /** NULL = 全部启用机场；否则只使用这个节点组 */
-  groupId: string | null;
+  /** NULL = 全部启用机场；否则只使用这个节点池 */
+  poolId: string | null;
   createdAt: number;
   updatedAt: number;
 }
@@ -168,12 +168,12 @@ export interface OverviewResponse {
   adminTokenConfigured: boolean;
   base: { seeded: boolean; updatedAt: number | null };
   configCount: number;
-  groupCount: number;
+  poolCount: number;
 }
 
-/* ---------------- 节点组 ---------------- */
+/* ---------------- 节点池 ---------------- */
 
-export interface NodeGroupMember {
+export interface NodePoolMember {
   airportId: string;
   /** 节点显示名，和机场刷新后节点表里的 name 对齐 */
   name: string;
@@ -181,19 +181,19 @@ export interface NodeGroupMember {
   type: string;
 }
 
-export interface NodeGroupSummary {
+export interface NodePoolSummary {
   id: string;
   name: string;
-  /** 组里记录了多少个成员（可能包含当前已不可用的节点） */
+  /** 池里记录了多少个成员（可能包含当前已不可用的节点） */
   nodeCount: number;
   createdAt: number;
   updatedAt: number;
 }
 
-export interface NodeGroupDetail extends NodeGroupSummary {
-  members: NodeGroupMember[];
+export interface NodePoolDetail extends NodePoolSummary {
+  members: NodePoolMember[];
 }
 
-export interface NodeGroupListResponse {
-  groups: NodeGroupSummary[];
+export interface NodePoolListResponse {
+  pools: NodePoolSummary[];
 }

@@ -8,13 +8,13 @@ import {
   type ConfigListResponse,
   configCreateSchema,
   configUpdateSchema,
-  type NodeGroupDetail,
-  type NodeGroupListResponse,
+  type NodePoolDetail,
+  type NodePoolListResponse,
   type NodesResponse,
   type NodeView,
-  nodeGroupCreateSchema,
-  nodeGroupMembersPayloadSchema,
-  nodeGroupUpdateSchema,
+  nodePoolCreateSchema,
+  nodePoolMembersPayloadSchema,
+  nodePoolUpdateSchema,
   type OverviewResponse,
   type RefreshResponse,
   type SaveResponse,
@@ -40,7 +40,7 @@ import { checkAdmin, timingSafeEqual } from './auth';
 import {
   type ConfigRecord,
   countConfigs,
-  countConfigsUsingGroup,
+  countConfigsUsingPool,
   createConfig,
   deleteConfig,
   getConfig,
@@ -54,22 +54,22 @@ import {
 } from './config-store';
 import type { Bindings } from './env';
 import {
-  countGroups,
-  createGroup,
-  deleteGroup,
-  getGroup,
-  getGroupSummary,
-  nameTaken as groupNameTaken,
-  listGroups,
-  renameGroup,
-  setGroupMembers,
-} from './group-store';
+  countPools,
+  createPool,
+  deletePool,
+  getPool,
+  getPoolSummary,
+  listPools,
+  nameTaken as poolNameTaken,
+  renamePool,
+  setPoolMembers,
+} from './pool-store';
 import {
   aggregatedUserinfo,
   buildProvidersYaml,
   type ProviderSource,
   providerNames,
-  relayGroup,
+  relayPool,
   relayProvider,
 } from './provider';
 import { parseRoute } from './routes';
@@ -79,7 +79,7 @@ import { validateConfig } from './validate';
 const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8' };
 const CONFIG_ID = /^\/api\/configs\/([A-Za-z0-9_-]{1,32})(\/token)?$/;
 const AIRPORT_ID = /^\/api\/airports\/([A-Za-z0-9_-]{1,32})(\/refresh)?$/;
-const GROUP_ID = /^\/api\/groups\/([A-Za-z0-9_-]{1,32})(\/nodes)?$/;
+const POOL_ID = /^\/api\/pools\/([A-Za-z0-9_-]{1,32})(\/nodes)?$/;
 
 export default {
   async fetch(request: Request, env: Bindings): Promise<Response> {
@@ -93,8 +93,8 @@ export default {
         return serveConfig(request, env, url, route.id);
       case 'provider':
         return handleProvider(env, url, route.id);
-      case 'group':
-        return handleGroup(env, url, route.id);
+      case 'pool':
+        return handlePool(env, url, route.id);
       case 'root':
         return redirect('/admin/configs');
       case 'notFound':
@@ -124,14 +124,14 @@ async function serveConfig(
     if (!record) return text('配置不存在', 404);
     if (!timingSafeEqual(token, record.token)) return text('订阅链接无效', 401);
 
-    // 节点来源二选一：指定的节点组，或全部启用机场。
-    if (record.groupId) {
-      const group = await getGroupSummary(env, record.groupId);
-      if (!group) {
-        return text('这份配置使用的节点组已不存在：到 /admin/groups 重新选择节点来源', 503);
+    // 节点来源二选一：指定的节点池，或全部启用机场。
+    if (record.poolId) {
+      const pool = await getPoolSummary(env, record.poolId);
+      if (!pool) {
+        return text('这份配置使用的节点池已不存在：到 /admin/pools 重新选择节点来源', 503);
       }
-      sources = [{ id: group.id, name: group.name, kind: 'group' }];
-      sourceLabel = `节点组: ${group.name}`;
+      sources = [{ id: pool.id, name: pool.name, kind: 'pool' }];
+      sourceLabel = `节点池: ${pool.name}`;
     } else {
       const refs = await listProviderRefs(env);
       if (refs.length === 0) {
@@ -177,13 +177,13 @@ async function handleProvider(env: Bindings, url: URL, id: string): Promise<Resp
   return relayProvider(env, id);
 }
 
-async function handleGroup(env: Bindings, url: URL, id: string): Promise<Response> {
+async function handlePool(env: Bindings, url: URL, id: string): Promise<Response> {
   const denied = await checkSubscriptionToken(env, url);
   if (denied) return denied;
-  return relayGroup(env, id);
+  return relayPool(env, id);
 }
 
-/** /providers 与 /groups 共用：token 属于任意一份配置即可读。 */
+/** /providers 共用：token 属于任意一份配置即可读。 */
 async function checkSubscriptionToken(env: Bindings, url: URL): Promise<Response | null> {
   const token = url.searchParams.get('token') ?? '';
   if (!token) return text('缺少订阅密钥', 401);
@@ -229,19 +229,19 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
   if (path === '/api/overview') {
     if (method !== 'GET') return methodNotAllowed();
     const base = await loadBase(env);
-    const [airportCount, nodeCount, failed, configCount, groupCount] = await Promise.all([
+    const [airportCount, nodeCount, failed, configCount, poolCount] = await Promise.all([
       countAirports(env),
       countNodes(env),
       countFailed(env),
       countConfigs(env),
-      countGroups(env),
+      countPools(env),
     ]);
     return json({
       airports: { count: airportCount, nodeCount, failed },
       adminTokenConfigured: Boolean(env.ADMIN_TOKEN?.trim()),
       base: { seeded: base.seeded, updatedAt: base.updatedAt },
       configCount,
-      groupCount,
+      poolCount,
     } satisfies OverviewResponse);
   }
 
@@ -285,17 +285,17 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
     return methodNotAllowed();
   }
 
-  if (path === '/api/groups') {
+  if (path === '/api/pools') {
     if (method === 'GET') {
-      return json({ groups: await listGroups(env) } satisfies NodeGroupListResponse);
+      return json({ pools: await listPools(env) } satisfies NodePoolListResponse);
     }
     if (method === 'POST') {
-      const payload = nodeGroupCreateSchema.safeParse(await readJson(request));
+      const payload = nodePoolCreateSchema.safeParse(await readJson(request));
       if (!payload.success) return json({ error: firstIssue(payload.error) }, 400);
-      if (await groupNameTaken(env, payload.data.name)) {
-        return json({ error: `已经有一个叫「${payload.data.name}」的节点组` }, 409);
+      if (await poolNameTaken(env, payload.data.name)) {
+        return json({ error: `已经有一个叫「${payload.data.name}」的节点池` }, 409);
       }
-      return json(await createGroup(env, payload.data.name), 201);
+      return json(await createPool(env, payload.data.name), 201);
     }
     return methodNotAllowed();
   }
@@ -388,43 +388,43 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
     return methodNotAllowed();
   }
 
-  const groupMatch = GROUP_ID.exec(path);
-  const groupId = groupMatch?.[1];
-  if (groupId) {
-    if (groupMatch[2]) {
+  const poolMatch = POOL_ID.exec(path);
+  const poolId = poolMatch?.[1];
+  if (poolId) {
+    if (poolMatch[2]) {
       if (method !== 'PUT') return methodNotAllowed();
-      const payload = nodeGroupMembersPayloadSchema.safeParse(await readJson(request));
+      const payload = nodePoolMembersPayloadSchema.safeParse(await readJson(request));
       if (!payload.success) return json({ error: firstIssue(payload.error) }, 400);
-      if (!(await getGroupSummary(env, groupId))) return json({ error: '节点组不存在' }, 404);
+      if (!(await getPoolSummary(env, poolId))) return json({ error: '节点池不存在' }, 404);
 
-      const nodeCount = await setGroupMembers(env, groupId, payload.data.members);
+      const nodeCount = await setPoolMembers(env, poolId, payload.data.members);
       return json({ ok: true, nodeCount });
     }
 
     if (method === 'GET') {
-      const group = await getGroup(env, groupId);
-      if (!group) return json({ error: '节点组不存在' }, 404);
-      return json(group satisfies NodeGroupDetail);
+      const pool = await getPool(env, poolId);
+      if (!pool) return json({ error: '节点池不存在' }, 404);
+      return json(pool satisfies NodePoolDetail);
     }
 
     if (method === 'PATCH') {
-      const payload = nodeGroupUpdateSchema.safeParse(await readJson(request));
+      const payload = nodePoolUpdateSchema.safeParse(await readJson(request));
       if (!payload.success) return json({ error: firstIssue(payload.error) }, 400);
-      if (await groupNameTaken(env, payload.data.name, groupId)) {
-        return json({ error: `已经有一个叫「${payload.data.name}」的节点组` }, 409);
+      if (await poolNameTaken(env, payload.data.name, poolId)) {
+        return json({ error: `已经有一个叫「${payload.data.name}」的节点池` }, 409);
       }
 
-      const updated = await renameGroup(env, groupId, payload.data.name);
-      if (!updated) return json({ error: '节点组不存在' }, 404);
+      const updated = await renamePool(env, poolId, payload.data.name);
+      if (!updated) return json({ error: '节点池不存在' }, 404);
       return json(updated);
     }
 
     if (method === 'DELETE') {
-      const inUse = await countConfigsUsingGroup(env, groupId);
+      const inUse = await countConfigsUsingPool(env, poolId);
       if (inUse > 0) {
-        return json({ error: `有 ${inUse} 份配置正在使用这个节点组，先改掉它们的节点来源` }, 409);
+        return json({ error: `有 ${inUse} 份配置正在使用这个节点池，先改掉它们的节点来源` }, 409);
       }
-      if (!(await deleteGroup(env, groupId))) return json({ error: '节点组不存在' }, 404);
+      if (!(await deletePool(env, poolId))) return json({ error: '节点池不存在' }, 404);
       return json({ ok: true });
     }
 
@@ -458,8 +458,8 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
       if (!result.ok) return json({ error: result.error }, 400);
       notices = result.notices;
     }
-    if (payload.data.groupId && !(await getGroupSummary(env, payload.data.groupId))) {
-      return json({ error: '节点组不存在' }, 400);
+    if (payload.data.poolId && !(await getPoolSummary(env, payload.data.poolId))) {
+      return json({ error: '节点池不存在' }, 400);
     }
 
     const updated = await updateConfig(env, id, payload.data);

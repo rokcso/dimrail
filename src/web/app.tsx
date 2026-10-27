@@ -6,7 +6,7 @@ import { Input } from './components/ui/input';
 import { ApiError, api } from './lib/api';
 import { AirportsPage } from './pages/airports';
 import { ConfigsPage } from './pages/configs';
-import { GroupsPage } from './pages/groups';
+import { PoolsPage } from './pages/pools';
 import { SettingsPage } from './pages/settings';
 import { normalizePath, parseAdminPath } from './routes';
 
@@ -63,7 +63,7 @@ export function App() {
 
   if (route.name === 'settings') return <SettingsPage {...props} />;
   if (route.name === 'airports') return <AirportsPage {...props} />;
-  if (route.name === 'groups') return <GroupsPage {...props} />;
+  if (route.name === 'pools') return <PoolsPage {...props} />;
   return <ConfigsPage {...props} />;
 }
 

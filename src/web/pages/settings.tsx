@@ -263,7 +263,7 @@ function OverviewSection({ info }: { info: OverviewResponse | undefined }) {
             danger={Boolean(info && info.airports.failed > 0)}
           />
           <StatCard label="配置" value={info ? `${info.configCount} 份` : '—'} />
-          <StatCard label="节点组" value={info ? `${info.groupCount} 个` : '—'} />
+          <StatCard label="节点池" value={info ? `${info.poolCount} 个` : '—'} />
           <StatCard
             label="基础配置"
             value={info ? (info.base.seeded ? '出厂模板' : '已保存') : '—'}

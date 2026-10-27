@@ -38,11 +38,11 @@ describe('parseRoute', () => {
     expect(parseRoute('/providers/airport-a')).toEqual({ kind: 'notFound' });
   });
 
-  it('节点组订阅路径', () => {
-    expect(parseRoute('/providers/groups/grp-1')).toEqual({ kind: 'group', id: 'grp-1' });
-    expect(parseRoute('/providers/groups/grp-1/')).toEqual({ kind: 'group', id: 'grp-1' });
-    expect(parseRoute('/providers/groups')).toEqual({ kind: 'notFound' });
-    expect(parseRoute('/admin/groups')).toEqual({ kind: 'assets' });
+  it('节点池订阅路径', () => {
+    expect(parseRoute('/providers/pools/grp-1')).toEqual({ kind: 'pool', id: 'grp-1' });
+    expect(parseRoute('/providers/pools/grp-1/')).toEqual({ kind: 'pool', id: 'grp-1' });
+    expect(parseRoute('/providers/pools')).toEqual({ kind: 'notFound' });
+    expect(parseRoute('/admin/pools')).toEqual({ kind: 'assets' });
   });
 
   it('其余交给静态资源', () => {

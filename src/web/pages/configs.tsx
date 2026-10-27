@@ -11,7 +11,7 @@ import type {
   ConfigDetail,
   ConfigListResponse,
   ConfigSummary,
-  NodeGroupListResponse,
+  NodePoolListResponse,
   SaveResponse,
   TokenResponse,
 } from '@/shared/schema';
@@ -46,7 +46,7 @@ export function ConfigsPage({
   const [savedYaml, setSavedYaml] = useState('');
   const [name, setName] = useState('');
   const [savedName, setSavedName] = useState('');
-  /** 节点来源：'' = 全部节点，否则是节点组 id。 */
+  /** 节点来源：'' = 全部节点，否则是节点池 id。 */
   const [scope, setScope] = useState('');
   const [notices, setNotices] = useState<string[]>([]);
   const [error, setError] = useState('');
@@ -62,9 +62,9 @@ export function ConfigsPage({
     refetchOnWindowFocus: false,
   });
 
-  const groups = useQuery({
-    queryKey: ['groups'],
-    queryFn: () => api.get<NodeGroupListResponse>('/api/groups', token),
+  const pools = useQuery({
+    queryKey: ['pools'],
+    queryFn: () => api.get<NodePoolListResponse>('/api/pools', token),
     retry: false,
     refetchOnWindowFocus: false,
   });
@@ -72,7 +72,7 @@ export function ConfigsPage({
   const configs = list.data?.configs ?? [];
   const activeId = selectedId ?? configs[0]?.id ?? null;
   const active = configs.find((item) => item.id === activeId) ?? null;
-  const groupOptions = groups.data?.groups ?? [];
+  const poolOptions = pools.data?.pools ?? [];
 
   const detail = useQuery({
     queryKey: ['config', activeId],
@@ -97,15 +97,15 @@ export function ConfigsPage({
     setSavedYaml(loaded.yaml);
     setName(loaded.name);
     setSavedName(loaded.name);
-    setScope(loaded.groupId ?? '');
+    setScope(loaded.poolId ?? '');
     setNotices([]);
     setError('');
   }, [loaded]);
 
   useEffect(() => {
-    const failure = list.error ?? detail.error ?? groups.error;
+    const failure = list.error ?? detail.error ?? pools.error;
     if (failure instanceof ApiError && failure.status === 401) onReject();
-  }, [list.error, detail.error, groups.error, onReject]);
+  }, [list.error, detail.error, pools.error, onReject]);
 
   useEffect(
     () => () => {
@@ -187,12 +187,12 @@ export function ConfigsPage({
   });
 
   const changeScope = useMutation({
-    mutationFn: (groupId: string | null) =>
-      api.put<SaveResponse>(`/api/configs/${activeId}`, token, { groupId }),
-    onSuccess: (_response, groupId) => {
-      setScope(groupId ?? '');
+    mutationFn: (poolId: string | null) =>
+      api.put<SaveResponse>(`/api/configs/${activeId}`, token, { poolId }),
+    onSuccess: (_response, poolId) => {
+      setScope(poolId ?? '');
       queryClient.setQueryData<ConfigDetail>(['config', activeId], (prev) =>
-        prev ? { ...prev, groupId } : prev,
+        prev ? { ...prev, poolId } : prev,
       );
       setError('');
       void queryClient.invalidateQueries({ queryKey: ['configs'] });
@@ -351,12 +351,12 @@ export function ConfigsPage({
                 className="h-7 max-w-44 rounded-control border-[0.5px] border-input bg-background px-2 text-[12px] text-foreground outline-none disabled:opacity-50"
               >
                 <option value="">全部节点</option>
-                {scope && !groupOptions.some((group) => group.id === scope) && (
-                  <option value={scope}>{groups.isPending ? '载入中…' : '节点组已失效'}</option>
+                {scope && !poolOptions.some((pool) => pool.id === scope) && (
+                  <option value={scope}>{pools.isPending ? '载入中…' : '节点池已失效'}</option>
                 )}
-                {groupOptions.map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.name}（{group.nodeCount}）
+                {poolOptions.map((pool) => (
+                  <option key={pool.id} value={pool.id}>
+                    {pool.name}（{pool.nodeCount}）
                   </option>
                 ))}
               </select>

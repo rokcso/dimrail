@@ -5,7 +5,7 @@ import { cn } from '@/web/lib/utils';
 const MAIN_TABS = [
   { to: '/admin/configs', label: '配置', icon: RiFileListLine },
   { to: '/admin/airports', label: '机场', icon: RiServerLine },
-  { to: '/admin/groups', label: '节点组', icon: RiStackLine },
+  { to: '/admin/pools', label: '节点池', icon: RiStackLine },
 ];
 
 const SETTINGS_TAB = {

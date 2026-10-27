@@ -1,13 +1,13 @@
 export type AdminRoute =
   | { name: 'configs'; id: string | null }
   | { name: 'airports'; id: string | null }
-  | { name: 'groups'; id: string | null }
+  | { name: 'pools'; id: string | null }
   | { name: 'settings'; section: 'base' | 'overview' };
 
 const ID = '([A-Za-z0-9_-]{1,32})';
 const CONFIGS = new RegExp(`^/admin/configs(?:/${ID})?$`);
 const AIRPORTS = new RegExp(`^/admin/airports(?:/${ID})?$`);
-const GROUPS = new RegExp(`^/admin/groups(?:/${ID})?$`);
+const POOLS = new RegExp(`^/admin/pools(?:/${ID})?$`);
 const SETTINGS = /^\/admin\/settings(?:\/(base|overview))?$/;
 
 export const ADMIN_HOME = '/admin/configs';
@@ -18,7 +18,7 @@ export function normalizePath(pathname: string): string {
   const path = pathname.replace(/\/+$/, '') || '/';
 
   if (path === '/' || path === '/admin') return ADMIN_HOME;
-  if (CONFIGS.test(path) || AIRPORTS.test(path) || GROUPS.test(path)) return path;
+  if (CONFIGS.test(path) || AIRPORTS.test(path) || POOLS.test(path)) return path;
   if (path === '/admin/settings' || path === '/admin/settings/base') return SETTINGS_HOME;
   if (path === '/admin/settings/overview') return path;
 
@@ -32,8 +32,8 @@ export function parseAdminPath(path: string): AdminRoute {
   const airport = AIRPORTS.exec(path);
   if (airport) return { name: 'airports', id: airport[1] ?? null };
 
-  const group = GROUPS.exec(path);
-  if (group) return { name: 'groups', id: group[1] ?? null };
+  const pool = POOLS.exec(path);
+  if (pool) return { name: 'pools', id: pool[1] ?? null };
 
   const settings = SETTINGS.exec(path);
   if (settings) {

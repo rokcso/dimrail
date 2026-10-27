@@ -7,7 +7,7 @@ import {
   saveNodes,
 } from './airport-store';
 import type { Bindings } from './env';
-import { getGroupSummary, listGroupNodes } from './group-store';
+import { getPoolSummary, listPoolNodes } from './pool-store';
 import type { ProxyNode } from './subscription';
 import { fetchSubscription } from './subscription';
 
@@ -19,11 +19,11 @@ function yamlKey(name: string): string {
   return JSON.stringify(name);
 }
 
-/** 配置的节点来源：一个机场，或一个节点组。 */
+/** 配置的节点来源：一个机场，或一个节点池。 */
 export interface ProviderSource {
   id: string;
   name: string;
-  kind: 'airport' | 'group';
+  kind: 'airport' | 'pool';
 }
 
 /** 运行时注入到 proxy-providers 段的 YAML 片段。URL 与缓存路径用 id，key 用显示名。 */
@@ -34,8 +34,8 @@ export function buildProvidersYaml(
 ): string {
   return sources
     .map((source) => {
-      const segment = `providers/${source.kind === 'group' ? 'groups' : 'airports'}`;
-      const file = source.kind === 'group' ? `group-${source.id}` : source.id;
+      const segment = `providers/${source.kind === 'pool' ? 'pools' : 'airports'}`;
+      const file = source.kind === 'pool' ? `pool-${source.id}` : source.id;
       return [
         `  ${yamlKey(source.name)}:`,
         '    type: http',
@@ -138,11 +138,11 @@ function providerYaml(airport: AirportRecord, cache: 'hit' | 'miss' | 'stale'): 
   return proxiesResponse(airport.nodes, headers);
 }
 
-/** 节点组不是一个可回源的机场，只从 D1 读成员当前对应的节点。 */
-export async function relayGroup(env: Bindings, id: string): Promise<Response> {
-  const group = await getGroupSummary(env, id);
-  if (!group) return text('节点组不存在', 404);
-  const nodes = await listGroupNodes(env, id);
+/** 节点池不是一个可回源的机场，只从 D1 读成员当前对应的节点。 */
+export async function relayPool(env: Bindings, id: string): Promise<Response> {
+  const pool = await getPoolSummary(env, id);
+  if (!pool) return text('节点池不存在', 404);
+  const nodes = await listPoolNodes(env, id);
   return proxiesResponse(nodes, {
     'Content-Type': 'text/yaml; charset=utf-8',
     'Cache-Control': 'private, no-store',

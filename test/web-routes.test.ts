@@ -11,7 +11,7 @@ describe('normalizePath', () => {
   it('保留资源 id，并去掉尾部斜杠', () => {
     expect(normalizePath('/admin/configs/abc')).toBe('/admin/configs/abc');
     expect(normalizePath('/admin/airports/abc/')).toBe('/admin/airports/abc');
-    expect(normalizePath('/admin/groups/abc')).toBe('/admin/groups/abc');
+    expect(normalizePath('/admin/pools/abc')).toBe('/admin/pools/abc');
   });
 
   it('设置页规范到分组路径', () => {
@@ -32,7 +32,7 @@ describe('parseAdminPath', () => {
     expect(parseAdminPath('/admin/configs')).toEqual({ name: 'configs', id: null });
     expect(parseAdminPath('/admin/configs/abc')).toEqual({ name: 'configs', id: 'abc' });
     expect(parseAdminPath('/admin/airports/a1')).toEqual({ name: 'airports', id: 'a1' });
-    expect(parseAdminPath('/admin/groups/g1')).toEqual({ name: 'groups', id: 'g1' });
+    expect(parseAdminPath('/admin/pools/g1')).toEqual({ name: 'pools', id: 'g1' });
   });
 
   it('解析设置分组', () => {

@@ -3,13 +3,13 @@ export type Route =
   | { kind: 'api'; path: string }
   | { kind: 'config'; id: string }
   | { kind: 'provider'; id: string }
-  | { kind: 'group'; id: string }
+  | { kind: 'pool'; id: string }
   | { kind: 'assets' }
   | { kind: 'notFound' };
 
 const CONFIG_PATH = /^\/sub\/([A-Za-z0-9_-]{1,32})$/;
 const AIRPORT_PROVIDER_PATH = /^\/providers\/airports\/([^/]+)$/;
-const GROUP_PROVIDER_PATH = /^\/providers\/groups\/([^/]+)$/;
+const POOL_PROVIDER_PATH = /^\/providers\/pools\/([^/]+)$/;
 
 /**
  * 纯路径解析，不碰 env 与网络，方便单测。
@@ -33,10 +33,10 @@ export function parseRoute(pathname: string): Route {
       return id ? { kind: 'provider', id } : { kind: 'notFound' };
     }
 
-    const group = GROUP_PROVIDER_PATH.exec(path);
-    if (group?.[1]) {
-      const id = decode(group[1]);
-      return id ? { kind: 'group', id } : { kind: 'notFound' };
+    const pool = POOL_PROVIDER_PATH.exec(path);
+    if (pool?.[1]) {
+      const id = decode(pool[1]);
+      return id ? { kind: 'pool', id } : { kind: 'notFound' };
     }
 
     return { kind: 'notFound' };

@@ -2,10 +2,10 @@ import { RiAddLine, RiDeleteBinLine, RiSearchLine } from '@remixicon/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type {
-  NodeGroupDetail,
-  NodeGroupListResponse,
-  NodeGroupMember,
-  NodeGroupSummary,
+  NodePoolDetail,
+  NodePoolListResponse,
+  NodePoolMember,
+  NodePoolSummary,
   NodesResponse,
   NodeView,
 } from '@/shared/schema';
@@ -26,7 +26,7 @@ const TONE_LABEL: Record<Tone, string> = {
 };
 
 /** 节点身份：机场 + 名字 + 类型，和 Worker 里存的成员键一致。 */
-function nodeKey(node: NodeGroupMember | NodeView): string {
+function nodeKey(node: NodePoolMember | NodeView): string {
   return JSON.stringify([node.airportId, node.name, node.type]);
 }
 
@@ -36,14 +36,7 @@ function sameSet(a: Set<string>, b: Set<string>): boolean {
   return true;
 }
 
-export function GroupsPage({
-  token,
-  path,
-  selectedId,
-  onNavigate,
-  onReplace,
-  onReject,
-}: PageProps) {
+export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onReject }: PageProps) {
   const queryClient = useQueryClient();
   const [nameDraft, setNameDraft] = useState('');
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
@@ -54,12 +47,12 @@ export function GroupsPage({
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [error, setError] = useState('');
-  /** 已经灌进本地选择的节点组 id：保存/改名只更新缓存，不重置正在编辑的选择。 */
-  const syncedGroupId = useRef<string | null>(null);
+  /** 已经灌进本地选择的节点池 id：保存/改名只更新缓存，不重置正在编辑的选择。 */
+  const syncedPoolId = useRef<string | null>(null);
 
   const list = useQuery({
-    queryKey: ['groups'],
-    queryFn: () => api.get<NodeGroupListResponse>('/api/groups', token),
+    queryKey: ['pools'],
+    queryFn: () => api.get<NodePoolListResponse>('/api/pools', token),
     retry: false,
     refetchOnWindowFocus: false,
   });
@@ -71,13 +64,13 @@ export function GroupsPage({
     refetchOnWindowFocus: false,
   });
 
-  const groups = list.data?.groups ?? [];
-  const active = groups.find((group) => group.id === selectedId) ?? null;
+  const pools = list.data?.pools ?? [];
+  const active = pools.find((pool) => pool.id === selectedId) ?? null;
   const nodes = nodesQuery.data?.nodes ?? [];
 
   const detail = useQuery({
-    queryKey: ['group', selectedId],
-    queryFn: () => api.get<NodeGroupDetail>(`/api/groups/${selectedId}`, token),
+    queryKey: ['pool', selectedId],
+    queryFn: () => api.get<NodePoolDetail>(`/api/pools/${selectedId}`, token),
     enabled: Boolean(selectedId),
     retry: false,
     refetchOnWindowFocus: false,
@@ -87,14 +80,14 @@ export function GroupsPage({
 
   useEffect(() => {
     if (list.isPending || !selectedId || active) return;
-    onReplace('/admin/groups');
+    onReplace('/admin/pools');
   }, [list.isPending, selectedId, active, onReplace]);
 
   useEffect(() => {
     if (!loaded) return;
     setNameDraft(loaded.name);
-    if (syncedGroupId.current !== loaded.id) {
-      syncedGroupId.current = loaded.id;
+    if (syncedPoolId.current !== loaded.id) {
+      syncedPoolId.current = loaded.id;
       const keys = new Set(loaded.members.map(nodeKey));
       setSelectedKeys(keys);
       setSavedKeys(new Set(keys));
@@ -119,9 +112,9 @@ export function GroupsPage({
     return () => window.removeEventListener('beforeunload', handler);
   }, [dirty]);
 
-  const refreshGroups = async () => {
+  const refreshPools = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['groups'] }),
+      queryClient.invalidateQueries({ queryKey: ['pools'] }),
       queryClient.invalidateQueries({ queryKey: ['overview'] }),
     ]);
   };
@@ -132,56 +125,56 @@ export function GroupsPage({
   };
 
   const create = useMutation({
-    mutationFn: () => api.post<NodeGroupSummary>('/api/groups', token, { name: newName }),
-    onSuccess: async (group) => {
+    mutationFn: () => api.post<NodePoolSummary>('/api/pools', token, { name: newName }),
+    onSuccess: async (pool) => {
       setAdding(false);
       setNewName('');
       setError('');
-      await refreshGroups();
-      onNavigate(`/admin/groups/${group.id}`);
+      await refreshPools();
+      onNavigate(`/admin/pools/${pool.id}`);
     },
     onError: onMutationError,
   });
 
   const rename = useMutation({
     mutationFn: (input: { id: string; name: string }) =>
-      api.patch<NodeGroupSummary>(`/api/groups/${input.id}`, token, { name: input.name }),
+      api.patch<NodePoolSummary>(`/api/pools/${input.id}`, token, { name: input.name }),
     onSuccess: async (_updated, input) => {
-      queryClient.setQueryData<NodeGroupDetail>(['group', input.id], (prev) =>
+      queryClient.setQueryData<NodePoolDetail>(['pool', input.id], (prev) =>
         prev ? { ...prev, name: input.name, updatedAt: Date.now() } : prev,
       );
       setError('');
-      await refreshGroups();
+      await refreshPools();
     },
     onError: async (err: Error) => {
       setNameDraft(active?.name ?? '');
       await onMutationError(err);
-      await refreshGroups();
+      await refreshPools();
     },
   });
 
   const remove = useMutation({
-    mutationFn: (id: string) => api.del<{ ok: boolean }>(`/api/groups/${id}`, token),
+    mutationFn: (id: string) => api.del<{ ok: boolean }>(`/api/pools/${id}`, token),
     onSuccess: async (_data, id) => {
-      queryClient.removeQueries({ queryKey: ['group', id] });
+      queryClient.removeQueries({ queryKey: ['pool', id] });
       setError('');
-      await refreshGroups();
+      await refreshPools();
     },
     onError: onMutationError,
   });
 
   const saveMembers = useMutation({
-    mutationFn: (members: NodeGroupMember[]) =>
-      api.put<{ ok: boolean; nodeCount: number }>(`/api/groups/${selectedId}/nodes`, token, {
+    mutationFn: (members: NodePoolMember[]) =>
+      api.put<{ ok: boolean; nodeCount: number }>(`/api/pools/${selectedId}/nodes`, token, {
         members,
       }),
     onSuccess: async (_data, members) => {
       setSavedKeys(new Set(members.map(nodeKey)));
-      queryClient.setQueryData<NodeGroupDetail>(['group', selectedId], (prev) =>
+      queryClient.setQueryData<NodePoolDetail>(['pool', selectedId], (prev) =>
         prev ? { ...prev, members, nodeCount: members.length, updatedAt: Date.now() } : prev,
       );
       setError('');
-      await refreshGroups();
+      await refreshPools();
     },
     onError: onMutationError,
   });
@@ -213,10 +206,10 @@ export function GroupsPage({
     });
   }, [nodes, airportFilter, typeFilter, search]);
 
-  const selectGroup = (id: string) => {
+  const selectPool = (id: string) => {
     if (id === selectedId) return;
-    if (dirty && !window.confirm('当前节点组的选择还没保存，切换后会丢失。继续？')) return;
-    onNavigate(`/admin/groups/${id}`);
+    if (dirty && !window.confirm('当前节点池的选择还没保存，切换后会丢失。继续？')) return;
+    onNavigate(`/admin/pools/${id}`);
   };
 
   const toggle = (node: NodeView) => {
@@ -271,10 +264,10 @@ export function GroupsPage({
     rename.mutate({ id: active.id, name: next });
   };
 
-  const confirmDelete = (group: NodeGroupSummary) => {
-    if (!window.confirm(`删除节点组「${group.name}」？正在使用它的配置需要先改成别的节点来源。`))
+  const confirmDelete = (pool: NodePoolSummary) => {
+    if (!window.confirm(`删除节点池「${pool.name}」？正在使用它的配置需要先改成别的节点来源。`))
       return;
-    remove.mutate(group.id);
+    remove.mutate(pool.id);
   };
 
   const tone: Tone = saveMembers.isPending ? 'saving' : error ? 'error' : dirty ? 'dirty' : 'saved';
@@ -283,14 +276,14 @@ export function GroupsPage({
     <>
       <div className="flex h-12 shrink-0 items-center justify-between pr-2 pl-4">
         <div className="flex items-baseline gap-1.5">
-          <span className="text-[12px] font-medium">节点组</span>
+          <span className="text-[12px] font-medium">节点池</span>
           <span className="text-[12px] tabular-nums text-muted-foreground">
-            {list.isPending ? '…' : groups.length}
+            {list.isPending ? '…' : pools.length}
           </span>
         </div>
         <button
           type="button"
-          title="新建节点组"
+          title="新建节点池"
           onClick={() => {
             setAdding(true);
             setError('');
@@ -302,11 +295,11 @@ export function GroupsPage({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
-        {groups.map((group) => {
-          const isActive = group.id === selectedId;
+        {pools.map((pool) => {
+          const isActive = pool.id === selectedId;
           return (
             <div
-              key={group.id}
+              key={pool.id}
               className={cn(
                 'group relative flex h-8 items-center rounded-control pr-7',
                 isActive ? 'bg-accent' : 'hover:bg-muted',
@@ -314,26 +307,26 @@ export function GroupsPage({
             >
               <button
                 type="button"
-                onClick={() => selectGroup(group.id)}
+                onClick={() => selectPool(pool.id)}
                 className={cn(
                   'min-w-0 flex-1 truncate px-2 text-left text-[13px]',
                   isActive ? 'text-accent-foreground' : 'text-foreground',
                 )}
               >
-                {group.name}
+                {pool.name}
               </button>
               <span
                 className={cn(
-                  'pointer-events-none absolute right-2 text-[12px] tabular-nums  group-hover:opacity-0',
+                  'pointer-events-none absolute right-2 text-[12px] tabular-nums group-hover:opacity-0',
                   isActive ? 'text-accent-foreground/70' : 'text-muted-foreground',
                 )}
               >
-                {group.nodeCount}
+                {pool.nodeCount}
               </span>
               <button
                 type="button"
-                title="删除节点组"
-                onClick={() => confirmDelete(group)}
+                title="删除节点池"
+                onClick={() => confirmDelete(pool)}
                 className="absolute right-1 flex size-5 items-center justify-center rounded-control text-muted-foreground opacity-0 outline-none hover:text-danger focus-visible:opacity-100 group-hover:opacity-100"
               >
                 <RiDeleteBinLine className="size-3.5" />
@@ -343,8 +336,8 @@ export function GroupsPage({
         })}
 
         {list.isPending && <p className="px-2 py-1 text-[12px] text-muted-foreground">载入中</p>}
-        {!list.isPending && groups.length === 0 && (
-          <p className="px-2 py-1 text-[12px] text-muted-foreground">还没有节点组</p>
+        {!list.isPending && pools.length === 0 && (
+          <p className="px-2 py-1 text-[12px] text-muted-foreground">还没有节点池</p>
         )}
       </div>
     </>
@@ -398,12 +391,12 @@ export function GroupsPage({
         />
       ) : (
         <PageHeader
-          title="节点组"
+          title="节点池"
           meta={<span className="tabular-nums">{nodes.length} 个可用节点</span>}
           actions={
             <Button variant="primary" onClick={() => setAdding(true)}>
               <RiAddLine className="size-3.5" />
-              新建节点组
+              新建节点池
             </Button>
           }
         />
@@ -422,8 +415,8 @@ export function GroupsPage({
           <Input
             value={newName}
             onChange={(event) => setNewName(event.target.value)}
-            placeholder="节点组名称"
-            aria-label="节点组名称"
+            placeholder="节点池名称"
+            aria-label="节点池名称"
             className="w-64"
             autoFocus
           />
@@ -576,15 +569,15 @@ export function GroupsPage({
         </>
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-          {groups.length === 0 ? (
+          {pools.length === 0 ? (
             <>
-              <p className="text-[13px] font-medium">还没有节点组</p>
+              <p className="text-[13px] font-medium">还没有节点池</p>
               <Button variant="primary" onClick={() => setAdding(true)}>
-                新建节点组
+                新建节点池
               </Button>
             </>
           ) : (
-            <p className="text-[12px] text-muted-foreground">未选择节点组</p>
+            <p className="text-[12px] text-muted-foreground">未选择节点池</p>
           )}
         </div>
       )}
