@@ -16,12 +16,12 @@ export function PageHeader({ title, meta, actions }: PageHeaderProps) {
           {title}
         </div>
         {meta && (
-          <div className="mt-1 flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
+          <div className="mt-1 flex min-w-0 items-center gap-2 text-[12px] text-muted-foreground">
             {meta}
           </div>
         )}
       </div>
-      {actions && <div className="flex shrink-0 items-center gap-1 pt-0.5">{actions}</div>}
+      {actions && <div className="flex shrink-0 items-center gap-1.5 -mt-0.5">{actions}</div>}
     </header>
   );
 }

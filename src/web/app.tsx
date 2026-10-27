@@ -92,10 +92,6 @@ function Gate({ onAccept }: { onAccept: (token: string) => void }) {
           <img src="/favicon.svg" alt="" className="size-5" />
           <span className="text-[15px] font-semibold tracking-tight">Dimrail</span>
         </div>
-        <p className="mt-1.5 text-[11px] text-muted-foreground">
-          输入管理口令。它只存在这台设备的浏览器里。
-        </p>
-
         <Input
           type="password"
           autoComplete="current-password"
@@ -119,7 +115,7 @@ function Gate({ onAccept }: { onAccept: (token: string) => void }) {
           {check.isPending ? '校验中' : '进入'}
         </Button>
 
-        {error && <p className="mt-2.5 text-[11px] text-danger">{error}</p>}
+        {error && <p className="mt-2.5 text-[12px] text-danger">{error}</p>}
       </form>
     </div>
   );

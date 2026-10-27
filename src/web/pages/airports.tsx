@@ -15,7 +15,7 @@ import type {
 } from '@/shared/schema';
 import { AppShell } from '../components/app-shell';
 import { PageHeader } from '../components/page-header';
-import { Dot, Status } from '../components/status';
+import { Status } from '../components/status';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { ApiError, api } from '../lib/api';
@@ -174,8 +174,12 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
   };
 
   const confirmDelete = (airport: AirportSummary) => {
-    const hint = `${airport.name} 会从所有配置的下发结果里消失。它的缓存节点也会一起删掉。`;
-    if (!window.confirm(`删除机场「${airport.name}」？\n\n${hint}`)) return;
+    if (
+      !window.confirm(
+        `删除机场「${airport.name}」？它的缓存节点会一起删除，所有配置都会失去这个机场的节点。`,
+      )
+    )
+      return;
     remove.mutate(airport.id);
   };
 
@@ -183,10 +187,10 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
 
   const sidebar = (
     <>
-      <div className="flex h-12 shrink-0 items-center justify-between px-3">
+      <div className="flex h-12 shrink-0 items-center justify-between pr-2 pl-4">
         <div className="flex items-baseline gap-1.5">
-          <span className="text-[11px] font-medium">机场</span>
-          <span className="text-[11px] tabular-nums text-muted-foreground">
+          <span className="text-[12px] font-medium">机场</span>
+          <span className="text-[12px] tabular-nums text-muted-foreground">
             {list.isPending ? '…' : airports.length}
           </span>
         </div>
@@ -197,7 +201,7 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
             setAdding(true);
             setError('');
           }}
-          className="flex size-5 items-center justify-center rounded-control text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground"
+          className="flex size-5 items-center justify-center rounded-control text-muted-foreground outline-none hover:bg-muted hover:text-foreground"
         >
           <RiAddLine className="size-3.5" />
         </button>
@@ -208,14 +212,14 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
           type="button"
           onClick={() => setSelected(null)}
           className={cn(
-            'flex h-8 w-full items-center rounded-control px-2 text-left text-[13px] outline-none transition-colors',
+            'flex h-8 w-full items-center rounded-control px-2 text-left text-[13px] outline-none',
             selected === null
               ? 'bg-accent text-accent-foreground'
               : 'text-foreground hover:bg-muted',
           )}
         >
           <span className="min-w-0 flex-1 truncate">全部节点</span>
-          <span className="ml-2 text-[11px] tabular-nums opacity-70">{totalNodes}</span>
+          <span className="ml-2 text-[12px] tabular-nums opacity-70">{totalNodes}</span>
         </button>
 
         {airports.map((airport) => {
@@ -244,7 +248,7 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
               </button>
               <span
                 className={cn(
-                  'pointer-events-none absolute right-2 text-[11px] tabular-nums transition-opacity duration-150 group-hover:opacity-0',
+                  'pointer-events-none absolute right-2 text-[12px] tabular-nums group-hover:opacity-0',
                   isActive ? 'text-accent-foreground/70' : 'text-muted-foreground',
                 )}
               >
@@ -254,7 +258,7 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
                 type="button"
                 title="删除机场"
                 onClick={() => confirmDelete(airport)}
-                className="absolute right-1 flex size-5 items-center justify-center rounded-control text-muted-foreground opacity-0 outline-none transition-opacity duration-150 hover:text-danger focus-visible:opacity-100 group-hover:opacity-100"
+                className="absolute right-1 flex size-5 items-center justify-center rounded-control text-muted-foreground opacity-0 outline-none hover:text-danger focus-visible:opacity-100 group-hover:opacity-100"
               >
                 <RiDeleteBinLine className="size-3.5" />
               </button>
@@ -262,7 +266,7 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
           );
         })}
 
-        {list.isPending && <p className="px-2 py-1 text-[11px] text-muted-foreground">载入中</p>}
+        {list.isPending && <p className="px-2 py-1 text-[12px] text-muted-foreground">载入中</p>}
       </div>
     </>
   );
@@ -283,7 +287,7 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
                 if (event.key === 'Escape') setNameDraft(active.name);
               }}
               maxLength={40}
-              className="-mx-1.5 w-full max-w-sm rounded-control bg-transparent px-1.5 text-[15px] font-medium tracking-tight text-foreground outline-none transition-colors hover:bg-muted focus:bg-muted"
+              className="-mx-1.5 w-full max-w-sm rounded-control bg-transparent px-1.5 text-[15px] font-medium tracking-tight text-foreground outline-none hover:bg-muted focus:bg-muted"
             />
           }
           meta={
@@ -292,13 +296,10 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
                 tone={active.error ? 'error' : 'saved'}
                 label={active.error ? '拉取失败' : active.enabled ? '正常' : '已停用'}
               />
-              <Dot />
               <span className="tabular-nums">{active.nodeCount} 个节点</span>
-              <Dot />
               <span className="tabular-nums">
                 {active.fetchedAt ? `更新于 ${formatStamp(active.fetchedAt)}` : '还没拉过'}
               </span>
-              <Dot />
               <span className="min-w-0 truncate" title={active.url}>
                 {active.url}
               </span>
@@ -308,7 +309,6 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
             <>
               <Button
                 variant="ghost"
-                size="sm"
                 onClick={() => toggle.mutate({ id: active.id, enabled: !active.enabled })}
                 disabled={toggle.isPending}
               >
@@ -316,7 +316,6 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
               </Button>
               <Button
                 variant="outline"
-                size="sm"
                 onClick={() => refreshOne.mutate(active.id)}
                 disabled={refreshOne.isPending}
               >
@@ -332,28 +331,22 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
           meta={
             <>
               <span className="tabular-nums">
-                {list.isPending ? '载入中' : `${airports.length} 个机场 · ${totalNodes} 个节点`}
+                {list.isPending ? '载入中' : `${totalNodes} 个节点`}
               </span>
-              {failed > 0 && (
-                <>
-                  <Dot />
-                  <span className="text-danger">{failed} 个拉取失败</span>
-                </>
-              )}
+              {failed > 0 && <span className="text-danger">{failed} 个机场拉取失败</span>}
             </>
           }
           actions={
             <>
               <Button
                 variant="outline"
-                size="sm"
                 onClick={() => refreshAll.mutate()}
                 disabled={refreshAll.isPending || airports.length === 0}
               >
                 <RiRefreshLine className="size-3.5" />
                 {refreshAll.isPending ? '拉取中' : '全部刷新'}
               </Button>
-              <Button variant="primary" size="sm" onClick={() => setAdding(true)}>
+              <Button variant="primary" onClick={() => setAdding(true)}>
                 <RiAddLine className="size-3.5" />
                 添加机场
               </Button>
@@ -364,7 +357,7 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
 
       {adding && (
         <form
-          className="flex shrink-0 items-center gap-2 border-b-[0.5px] border-border px-4 py-2"
+          className="flex shrink-0 items-center gap-2 border-b-[0.5px] border-border px-6 py-2"
           onSubmit={(event) => {
             event.preventDefault();
             submitNew();
@@ -373,21 +366,20 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
           <Input
             value={newName}
             onChange={(event) => setNewName(event.target.value)}
-            placeholder="机场名，会显示在客户端"
+            placeholder="机场名"
             aria-label="机场名"
             className="w-44"
           />
           <Input
             value={newUrl}
             onChange={(event) => setNewUrl(event.target.value)}
-            placeholder="订阅链接 https://…"
+            placeholder="订阅链接"
             aria-label="订阅链接"
             className="flex-1"
           />
           <Button
             type="submit"
             variant="primary"
-            size="sm"
             disabled={create.isPending || !newName.trim() || !newUrl.trim()}
           >
             {create.isPending ? '拉取中' : '添加并拉取'}
@@ -395,7 +387,6 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
           <Button
             type="button"
             variant="ghost"
-            size="sm"
             onClick={() => {
               setAdding(false);
               setError('');
@@ -407,12 +398,12 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
       )}
 
       {error && (
-        <div className="shrink-0 border-b-[0.5px] border-border px-6 py-1.5 text-[11px] text-danger">
+        <div className="shrink-0 border-b-[0.5px] border-border px-6 py-1.5 text-[12px] text-danger">
           {error}
         </div>
       )}
 
-      <div className="flex shrink-0 items-center gap-2 border-b-[0.5px] border-border px-4 py-1.5">
+      <div className="flex shrink-0 items-center gap-2 border-b-[0.5px] border-border px-6 py-1.5">
         <RiSearchLine className="size-3.5 shrink-0 text-muted-foreground" />
         <input
           value={search}
@@ -425,7 +416,7 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
           value={typeFilter}
           onChange={(event) => setTypeFilter(event.target.value)}
           aria-label="节点类型"
-          className="h-6 rounded-control bg-transparent px-1 text-[11px] text-muted-foreground outline-none hover:text-foreground"
+          className="h-6 rounded-control bg-transparent px-1 text-[12px] text-muted-foreground outline-none hover:text-foreground"
         >
           <option value="all">全部类型</option>
           {types.map((type) => (
@@ -434,7 +425,7 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
             </option>
           ))}
         </select>
-        <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+        <span className="shrink-0 text-[12px] tabular-nums text-muted-foreground">
           {rows.length} / {totalNodes}
         </span>
       </div>
@@ -443,33 +434,29 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
         {rows.length > 0 ? (
           <table className="w-full border-collapse text-[12px]">
             <thead className="sticky top-0 z-10 bg-background">
-              <tr className="border-b-[0.5px] border-border text-left text-[11px] text-muted-foreground">
-                <th className="px-4 py-1.5 font-normal">名称</th>
+              <tr className="border-b-[0.5px] border-border text-left text-[12px] text-muted-foreground">
+                <th className="py-1.5 pr-3 pl-6 font-normal">名称</th>
                 <th className="w-20 px-3 py-1.5 font-normal">类型</th>
                 <th className="px-3 py-1.5 font-normal">服务器</th>
                 <th className="w-16 px-3 py-1.5 text-right font-normal">端口</th>
-                <th className="w-32 px-4 py-1.5 font-normal">来源</th>
+                <th className="w-32 py-1.5 pr-6 pl-3 font-normal">来源</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((node) => (
                 <tr
                   key={`${node.airportId}:${node.name}:${node.server}:${node.port}`}
-                  className="border-b-[0.5px] border-border/60 transition-colors hover:bg-surface"
+                  className="border-b-[0.5px] border-border/60 hover:bg-surface"
                 >
-                  <td className="max-w-0 truncate px-4 py-1 text-foreground">{node.name}</td>
-                  <td className="px-3 py-1">
-                    <span className="rounded-[3px] bg-muted px-1 py-px text-[10px] text-muted-foreground">
-                      {node.type || '—'}
-                    </span>
-                  </td>
-                  <td className="max-w-0 truncate px-3 py-1 font-mono text-[11px] text-muted-foreground">
+                  <td className="max-w-0 truncate py-1 pr-3 pl-6 text-foreground">{node.name}</td>
+                  <td className="px-3 py-1 text-muted-foreground">{node.type || '—'}</td>
+                  <td className="max-w-0 truncate px-3 py-1 font-mono text-[12px] text-muted-foreground">
                     {node.server}
                   </td>
                   <td className="px-3 py-1 text-right tabular-nums text-muted-foreground">
                     {node.port}
                   </td>
-                  <td className="max-w-0 truncate px-4 py-1 text-muted-foreground">
+                  <td className="max-w-0 truncate py-1 pr-6 pl-3 text-muted-foreground">
                     {node.airportName}
                   </td>
                 </tr>
@@ -479,20 +466,17 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
             {nodesQuery.isPending || list.isPending ? (
-              <p className="text-[11px] text-muted-foreground">载入中</p>
+              <p className="text-[12px] text-muted-foreground">载入中</p>
             ) : airports.length === 0 ? (
               <>
                 <p className="text-[13px] font-medium">还没有机场</p>
-                <p className="max-w-xs text-[11px] leading-relaxed text-muted-foreground">
-                  贴一个订阅链接进来，节点会拉下来存进数据库，配置里和下发的订阅都会用上它。
-                </p>
                 <Button variant="primary" onClick={() => setAdding(true)}>
                   添加第一个机场
                 </Button>
               </>
             ) : (
-              <p className="text-[11px] text-muted-foreground">
-                {totalNodes > 0 ? '没有匹配的节点' : '这些机场还没有节点，点「全部刷新」拉一次'}
+              <p className="text-[12px] text-muted-foreground">
+                {totalNodes > 0 ? '没有匹配的节点' : '还没有拉取到节点'}
               </p>
             )}
           </div>
@@ -500,12 +484,12 @@ export function AirportsPage({ token, path, onNavigate, onReject }: PageProps) {
       </div>
 
       {active?.error && (
-        <div className="flex shrink-0 items-center gap-2 border-t-[0.5px] border-border px-6 py-1.5 text-[11px] text-danger">
+        <div className="flex shrink-0 items-center gap-2 border-t-[0.5px] border-border px-6 py-1.5 text-[12px] text-danger">
           <span>上次拉取失败：{active.error}</span>
           {active.nodeCount > 0 && (
             <span className="flex items-center gap-1 text-muted-foreground">
               <RiCheckLine className="size-3.5" />
-              显示的是 {formatStamp(active.fetchedAt)} 缓存的节点
+              当前使用 {formatStamp(active.fetchedAt)} 的缓存
             </span>
           )}
         </div>

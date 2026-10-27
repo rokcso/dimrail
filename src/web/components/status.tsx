@@ -28,12 +28,3 @@ export function Status({ tone, label, time }: StatusProps) {
     </>
   );
 }
-
-/** 元信息行里的分隔点。 */
-export function Dot() {
-  return (
-    <span className="text-border" aria-hidden>
-      ·
-    </span>
-  );
-}

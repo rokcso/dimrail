@@ -17,8 +17,9 @@
   --color-muted-foreground: var(--gray-11);
   --color-ring: var(--grass-8);
   --color-primary: var(--grass-11);
-  --color-primary-hover: var(--grass-12);
-  --color-primary-foreground: #ffffff;
+  --color-primary-solid: var(--grass-9);
+  --color-primary-solid-hover: var(--grass-10);
+  --color-primary-solid-foreground: var(--gray-1);
   --color-accent: var(--grass-3);
   --color-accent-foreground: var(--grass-11);
   --color-warning: var(--amber-11);

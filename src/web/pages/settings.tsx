@@ -5,7 +5,7 @@ import type { BaseConfigResponse, OverviewResponse, SaveResponse } from '@/share
 import { AppShell } from '../components/app-shell';
 import { LazyYamlEditor } from '../components/lazy-editor';
 import { PageHeader } from '../components/page-header';
-import { Dot, Status, type Tone } from '../components/status';
+import { Status, type Tone } from '../components/status';
 import { Button } from '../components/ui/button';
 import { ApiError, api } from '../lib/api';
 import { cn, formatBytes, formatStamp, formatTime } from '../lib/utils';
@@ -133,11 +133,8 @@ export function SettingsPage({ token, path, onNavigate, onReject }: PageProps) {
 
   const sidebar = (
     <>
-      <div className="flex h-12 shrink-0 items-center justify-between px-3">
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-[11px] font-medium">设置</span>
-          <span className="text-[11px] tabular-nums text-muted-foreground">{SECTIONS.length}</span>
-        </div>
+      <div className="flex h-12 shrink-0 items-center pr-2 pl-4">
+        <span className="text-[12px] font-medium">设置</span>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-px overflow-y-auto px-2 pb-2">
@@ -150,7 +147,7 @@ export function SettingsPage({ token, path, onNavigate, onReject }: PageProps) {
               onClick={() => setSection(id)}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'flex h-8 items-center gap-2 rounded-control px-2 text-left text-[13px] outline-none transition-colors',
+                'flex h-8 items-center gap-2 rounded-control px-2 text-left text-[13px] outline-none',
                 active ? 'bg-accent text-accent-foreground' : 'text-foreground hover:bg-muted',
               )}
             >
@@ -176,9 +173,9 @@ export function SettingsPage({ token, path, onNavigate, onReject }: PageProps) {
                   label={TONE_LABEL[tone]}
                   time={tone === 'saved' ? `更新于 ${formatTime(loaded?.updatedAt ?? null)}` : ''}
                 />
-                <Dot />
-                <span className="tabular-nums">
-                  {metrics.lines} 行 · {formatBytes(metrics.bytes)}
+                <span className="flex items-center gap-1.5 tabular-nums">
+                  <span>{metrics.lines} 行</span>
+                  <span>{formatBytes(metrics.bytes)}</span>
                 </span>
               </>
             }
@@ -186,7 +183,6 @@ export function SettingsPage({ token, path, onNavigate, onReject }: PageProps) {
               <>
                 <Button
                   variant="ghost"
-                  size="sm"
                   onClick={confirmReset}
                   disabled={!loaded || reset.isPending}
                 >
@@ -207,7 +203,7 @@ export function SettingsPage({ token, path, onNavigate, onReject }: PageProps) {
           {message && (
             <div
               className={cn(
-                'shrink-0 border-b-[0.5px] border-border px-6 py-1.5 text-[11px]',
+                'shrink-0 border-b-[0.5px] border-border px-6 py-1.5 text-[12px]',
                 error ? 'text-danger' : 'text-warning',
               )}
             >
@@ -215,7 +211,7 @@ export function SettingsPage({ token, path, onNavigate, onReject }: PageProps) {
             </div>
           )}
 
-          <div className="min-h-0 flex-1 px-3">
+          <div className="min-h-0 flex-1 px-6">
             {loaded ? (
               <LazyYamlEditor
                 className="h-full"
@@ -230,7 +226,7 @@ export function SettingsPage({ token, path, onNavigate, onReject }: PageProps) {
               />
             ) : (
               <div className="flex h-full items-center justify-center">
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-[12px] text-muted-foreground">
                   {base.isPending ? '载入中' : '没能载入基础配置'}
                 </p>
               </div>
@@ -238,42 +234,22 @@ export function SettingsPage({ token, path, onNavigate, onReject }: PageProps) {
           </div>
 
           {loaded?.seeded && !message && (
-            <div className="shrink-0 border-t-[0.5px] border-border px-6 py-1.5 text-[11px] text-muted-foreground">
-              现在显示的是出厂模板，保存后开始使用 D1 里的版本。
+            <div className="shrink-0 border-t-[0.5px] border-border px-6 py-1.5 text-[12px] text-muted-foreground">
+              当前显示出厂模板，保存后生效。
             </div>
           )}
         </>
       ) : (
-        <OverviewSection info={info} onNavigate={onNavigate} />
+        <OverviewSection info={info} />
       )}
     </AppShell>
   );
 }
 
-function OverviewSection({
-  info,
-  onNavigate,
-}: {
-  info: OverviewResponse | undefined;
-  onNavigate: (to: string) => void;
-}) {
+function OverviewSection({ info }: { info: OverviewResponse | undefined }) {
   return (
     <>
-      <PageHeader
-        title="概览"
-        meta={
-          <>
-            <span>只读</span>
-            <Dot />
-            <span>数据来自当前 D1</span>
-          </>
-        }
-        actions={
-          <Button variant="outline" size="sm" onClick={() => onNavigate('/admin')}>
-            去看配置
-          </Button>
-        }
-      />
+      <PageHeader title="概览" />
 
       <div className="min-h-0 flex-1 overflow-auto px-6 py-5">
         <div className="grid max-w-4xl grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -283,48 +259,27 @@ function OverviewSection({
             detail={
               info
                 ? `${info.airports.nodeCount} 个节点${
-                    info.airports.failed > 0 ? ` · ${info.airports.failed} 个拉取失败` : ''
+                    info.airports.failed > 0 ? `，${info.airports.failed} 个机场拉取失败` : ''
                   }`
                 : undefined
             }
             danger={Boolean(info && info.airports.failed > 0)}
-            action={{ label: '管理机场', to: '/admin/airports', onNavigate }}
           />
-          <StatCard
-            label="配置"
-            value={info ? `${info.configCount} 份` : '—'}
-            detail="每份有独立的订阅链接和节点来源"
-            action={{ label: '管理配置', to: '/admin', onNavigate }}
-          />
-          <StatCard
-            label="节点组"
-            value={info ? `${info.groupCount} 个` : '—'}
-            detail="手选节点子集，可跨机场"
-            action={{ label: '管理节点组', to: '/admin/groups', onNavigate }}
-          />
+          <StatCard label="配置" value={info ? `${info.configCount} 份` : '—'} />
+          <StatCard label="节点组" value={info ? `${info.groupCount} 个` : '—'} />
           <StatCard
             label="基础配置"
             value={info ? (info.base.seeded ? '出厂模板' : '已保存') : '—'}
             detail={
-              info && !info.base.seeded
-                ? `更新于 ${formatStamp(info.base.updatedAt)}`
-                : '新建配置时的起点'
+              info && !info.base.seeded ? `更新于 ${formatStamp(info.base.updatedAt)}` : undefined
             }
-            action={{ label: '去编辑', to: '/admin/settings', onNavigate }}
           />
           <StatCard
             label="管理口令"
             value={info ? (info.adminTokenConfigured ? '已配置' : '未配置') : '—'}
-            detail="Worker Secret: ADMIN_TOKEN"
             danger={Boolean(info && !info.adminTokenConfigured)}
           />
         </div>
-
-        <p className="mt-5 max-w-4xl text-[11px] leading-relaxed text-muted-foreground">
-          这里的数字来自
-          `/api/overview`，修改机场或配置后会自动重新获取。基础配置只影响之后新建的配置，
-          已有配置的内容是新建时的快照。
-        </p>
       </div>
     </>
   );
@@ -335,24 +290,12 @@ interface StatCardProps {
   value: ReactNode;
   detail?: string;
   danger?: boolean;
-  action?: { label: string; to: string; onNavigate: (to: string) => void };
 }
 
-function StatCard({ label, value, detail, danger, action }: StatCardProps) {
+function StatCard({ label, value, detail, danger }: StatCardProps) {
   return (
     <div className="rounded-card border-[0.5px] border-border bg-surface px-4 py-3">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] text-muted-foreground">{label}</span>
-        {action && (
-          <button
-            type="button"
-            onClick={() => action.onNavigate(action.to)}
-            className="shrink-0 text-[11px] text-muted-foreground outline-none transition-colors hover:text-foreground"
-          >
-            {action.label}
-          </button>
-        )}
-      </div>
+      <span className="text-[12px] text-muted-foreground">{label}</span>
       <p
         className={cn(
           'mt-1 text-[15px] font-medium tabular-nums tracking-tight',
@@ -362,7 +305,7 @@ function StatCard({ label, value, detail, danger, action }: StatCardProps) {
         {value}
       </p>
       {detail && (
-        <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{detail}</p>
+        <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">{detail}</p>
       )}
     </div>
   );

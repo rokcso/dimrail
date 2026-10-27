@@ -1,4 +1,4 @@
-import { RiAddLine, RiCheckLine, RiDeleteBinLine, RiLinkM, RiSearchLine } from '@remixicon/react';
+import { RiAddLine, RiDeleteBinLine, RiSearchLine } from '@remixicon/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type {
@@ -11,11 +11,11 @@ import type {
 } from '@/shared/schema';
 import { AppShell } from '../components/app-shell';
 import { PageHeader } from '../components/page-header';
-import { Dot, Status, type Tone } from '../components/status';
+import { Status, type Tone } from '../components/status';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { ApiError, api } from '../lib/api';
-import { cn, formatStamp } from '../lib/utils';
+import { cn } from '../lib/utils';
 import type { PageProps } from './types';
 
 const TONE_LABEL: Record<Tone, string> = {
@@ -262,8 +262,8 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
   };
 
   const confirmDelete = (group: NodeGroupSummary) => {
-    const hint = '正在使用这个节点组的配置需要先改成别的来源，否则删除会被拒绝。';
-    if (!window.confirm(`删除节点组「${group.name}」？\n\n${hint}`)) return;
+    if (!window.confirm(`删除节点组「${group.name}」？正在使用它的配置需要先改成别的节点来源。`))
+      return;
     remove.mutate(group.id);
   };
 
@@ -271,10 +271,10 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
 
   const sidebar = (
     <>
-      <div className="flex h-12 shrink-0 items-center justify-between px-3">
+      <div className="flex h-12 shrink-0 items-center justify-between pr-2 pl-4">
         <div className="flex items-baseline gap-1.5">
-          <span className="text-[11px] font-medium">节点组</span>
-          <span className="text-[11px] tabular-nums text-muted-foreground">
+          <span className="text-[12px] font-medium">节点组</span>
+          <span className="text-[12px] tabular-nums text-muted-foreground">
             {list.isPending ? '…' : groups.length}
           </span>
         </div>
@@ -285,7 +285,7 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
             setAdding(true);
             setError('');
           }}
-          className="flex size-5 items-center justify-center rounded-control text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground"
+          className="flex size-5 items-center justify-center rounded-control text-muted-foreground outline-none hover:bg-muted hover:text-foreground"
         >
           <RiAddLine className="size-3.5" />
         </button>
@@ -314,7 +314,7 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
               </button>
               <span
                 className={cn(
-                  'pointer-events-none absolute right-2 text-[11px] tabular-nums transition-opacity duration-150 group-hover:opacity-0',
+                  'pointer-events-none absolute right-2 text-[12px] tabular-nums  group-hover:opacity-0',
                   isActive ? 'text-accent-foreground/70' : 'text-muted-foreground',
                 )}
               >
@@ -324,7 +324,7 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
                 type="button"
                 title="删除节点组"
                 onClick={() => confirmDelete(group)}
-                className="absolute right-1 flex size-5 items-center justify-center rounded-control text-muted-foreground opacity-0 outline-none transition-opacity duration-150 hover:text-danger focus-visible:opacity-100 group-hover:opacity-100"
+                className="absolute right-1 flex size-5 items-center justify-center rounded-control text-muted-foreground opacity-0 outline-none hover:text-danger focus-visible:opacity-100 group-hover:opacity-100"
               >
                 <RiDeleteBinLine className="size-3.5" />
               </button>
@@ -332,9 +332,9 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
           );
         })}
 
-        {list.isPending && <p className="px-2 py-1 text-[11px] text-muted-foreground">载入中</p>}
+        {list.isPending && <p className="px-2 py-1 text-[12px] text-muted-foreground">载入中</p>}
         {!list.isPending && groups.length === 0 && (
-          <p className="px-2 py-1 text-[11px] text-muted-foreground">还没有节点组</p>
+          <p className="px-2 py-1 text-[12px] text-muted-foreground">还没有节点组</p>
         )}
       </div>
     </>
@@ -354,24 +354,21 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
                 if (event.key === 'Escape') setNameDraft(active.name);
               }}
               maxLength={40}
-              className="-mx-1.5 w-full max-w-sm rounded-control bg-transparent px-1.5 text-[15px] font-medium tracking-tight text-foreground outline-none transition-colors hover:bg-muted focus:bg-muted"
+              className="-mx-1.5 w-full max-w-sm rounded-control bg-transparent px-1.5 text-[15px] font-medium tracking-tight text-foreground outline-none hover:bg-muted focus:bg-muted"
             />
           }
           meta={
             <>
               <Status tone={tone} label={TONE_LABEL[tone]} />
-              <Dot />
-              <span className="tabular-nums">
-                {selectedKeys.size} 个已选 · {nodes.length} 个可用
-              </span>
+              <span className="tabular-nums">{selectedKeys.size} 个已选</span>
+              <span className="tabular-nums">{nodes.length} 个可用</span>
               {staleCount > 0 && (
                 <>
-                  <Dot />
-                  <span className="text-warning">{staleCount} 个已选节点当前不可用</span>
+                  <span className="text-warning">{staleCount} 个已选节点不可用</span>
                   <button
                     type="button"
                     onClick={dropStale}
-                    className="text-[11px] text-muted-foreground underline-offset-2 outline-none hover:text-foreground hover:underline"
+                    className="text-[12px] text-muted-foreground underline-offset-2 outline-none hover:text-foreground hover:underline"
                   >
                     清理
                   </button>
@@ -380,34 +377,21 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
             </>
           }
           actions={
-            <>
-              <span className="mr-1 text-[11px] tabular-nums text-muted-foreground">
-                更新于 {formatStamp(active.updatedAt)}
-              </span>
-              <Button
-                variant="primary"
-                onClick={submitSave}
-                disabled={!dirty || saveMembers.isPending}
-              >
-                {saveMembers.isPending ? '保存中' : '保存选择'}
-              </Button>
-            </>
+            <Button
+              variant="primary"
+              onClick={submitSave}
+              disabled={!dirty || saveMembers.isPending}
+            >
+              {saveMembers.isPending ? '保存中' : '保存选择'}
+            </Button>
           }
         />
       ) : (
         <PageHeader
-          title="节点组合"
-          meta={
-            <>
-              <span className="tabular-nums">
-                {list.isPending ? '载入中' : `${groups.length} 个节点组`}
-              </span>
-              <Dot />
-              <span className="tabular-nums">{nodes.length} 个可用节点</span>
-            </>
-          }
+          title="节点组"
+          meta={<span className="tabular-nums">{nodes.length} 个可用节点</span>}
           actions={
-            <Button variant="primary" size="sm" onClick={() => setAdding(true)}>
+            <Button variant="primary" onClick={() => setAdding(true)}>
               <RiAddLine className="size-3.5" />
               新建节点组
             </Button>
@@ -417,7 +401,7 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
 
       {adding && (
         <form
-          className="flex shrink-0 items-center gap-2 border-b-[0.5px] border-border px-4 py-2"
+          className="flex shrink-0 items-center gap-2 border-b-[0.5px] border-border px-6 py-2"
           onSubmit={(event) => {
             event.preventDefault();
             if (!newName.trim() || create.isPending) return;
@@ -428,23 +412,17 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
           <Input
             value={newName}
             onChange={(event) => setNewName(event.target.value)}
-            placeholder="节点组名字，会出现在客户端"
-            aria-label="节点组名字"
+            placeholder="节点组名称"
+            aria-label="节点组名称"
             className="w-64"
             autoFocus
           />
-          <Button
-            type="submit"
-            variant="primary"
-            size="sm"
-            disabled={create.isPending || !newName.trim()}
-          >
+          <Button type="submit" variant="primary" disabled={create.isPending || !newName.trim()}>
             {create.isPending ? '创建中' : '创建'}
           </Button>
           <Button
             type="button"
             variant="ghost"
-            size="sm"
             onClick={() => {
               setAdding(false);
               setNewName('');
@@ -457,14 +435,14 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
       )}
 
       {error && (
-        <div className="shrink-0 border-b-[0.5px] border-border px-6 py-1.5 text-[11px] text-danger">
+        <div className="shrink-0 border-b-[0.5px] border-border px-6 py-1.5 text-[12px] text-danger">
           {error}
         </div>
       )}
 
       {active ? (
         <>
-          <div className="flex shrink-0 flex-wrap items-center gap-2 border-b-[0.5px] border-border px-4 py-1.5">
+          <div className="flex shrink-0 flex-wrap items-center gap-2 border-b-[0.5px] border-border px-6 py-1.5">
             <RiSearchLine className="size-3.5 shrink-0 text-muted-foreground" />
             <input
               value={search}
@@ -477,7 +455,7 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
               value={airportFilter}
               onChange={(event) => setAirportFilter(event.target.value)}
               aria-label="机场"
-              className="h-6 max-w-32 rounded-control bg-transparent px-1 text-[11px] text-muted-foreground outline-none hover:text-foreground"
+              className="h-6 max-w-32 rounded-control bg-transparent px-1 text-[12px] text-muted-foreground outline-none hover:text-foreground"
             >
               <option value="all">全部机场</option>
               {airports.map((airport) => (
@@ -490,7 +468,7 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
               value={typeFilter}
               onChange={(event) => setTypeFilter(event.target.value)}
               aria-label="节点类型"
-              className="h-6 rounded-control bg-transparent px-1 text-[11px] text-muted-foreground outline-none hover:text-foreground"
+              className="h-6 rounded-control bg-transparent px-1 text-[12px] text-muted-foreground outline-none hover:text-foreground"
             >
               <option value="all">全部类型</option>
               {types.map((type) => (
@@ -499,23 +477,23 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
                 </option>
               ))}
             </select>
-            <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+            <span className="shrink-0 text-[12px] tabular-nums text-muted-foreground">
               {rows.length} / {nodes.length}
             </span>
-            <span className="mx-1 h-3 w-px bg-border" aria-hidden />
+            <span className="mx-1 h-3 w-[0.5px] bg-border" aria-hidden />
             <button
               type="button"
               onClick={selectVisible}
-              className="text-[11px] text-muted-foreground outline-none transition-colors hover:text-foreground"
+              className="text-[12px] text-muted-foreground outline-none hover:text-foreground"
             >
-              全选筛选结果
+              全选结果
             </button>
             <button
               type="button"
               onClick={clearVisible}
-              className="text-[11px] text-muted-foreground outline-none transition-colors hover:text-foreground"
+              className="text-[12px] text-muted-foreground outline-none hover:text-foreground"
             >
-              清空筛选结果
+              清空结果
             </button>
           </div>
 
@@ -523,15 +501,15 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
             {rows.length > 0 ? (
               <table className="w-full border-collapse text-[12px]">
                 <thead className="sticky top-0 z-10 bg-background">
-                  <tr className="border-b-[0.5px] border-border text-left text-[11px] text-muted-foreground">
-                    <th className="w-9 py-1.5 pl-4">
+                  <tr className="border-b-[0.5px] border-border text-left text-[12px] text-muted-foreground">
+                    <th className="w-9 py-1.5 pl-6">
                       <span className="sr-only">选择</span>
                     </th>
                     <th className="px-2 py-1.5 font-normal">名称</th>
                     <th className="w-20 px-3 py-1.5 font-normal">类型</th>
                     <th className="px-3 py-1.5 font-normal">服务器</th>
                     <th className="w-16 px-3 py-1.5 text-right font-normal">端口</th>
-                    <th className="w-32 px-4 py-1.5 font-normal">来源</th>
+                    <th className="w-32 py-1.5 pr-6 pl-3 font-normal">来源</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -543,33 +521,29 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
                         key={`${key}`}
                         onClick={() => toggle(node)}
                         className={cn(
-                          'cursor-pointer border-b-[0.5px] border-border/60 transition-colors',
+                          'cursor-pointer border-b-[0.5px] border-border/60',
                           checked ? 'bg-accent/60 hover:bg-accent' : 'hover:bg-surface',
                         )}
                       >
-                        <td className="py-1 pl-4">
+                        <td className="py-1 pl-6">
                           <input
                             type="checkbox"
                             checked={checked}
                             onClick={(event) => event.stopPropagation()}
                             onChange={() => toggle(node)}
                             aria-label={`选择 ${node.name}`}
-                            className="size-3.5 accent-[var(--grass-11)]"
+                            className="size-3.5 accent-primary"
                           />
                         </td>
                         <td className="max-w-0 truncate px-2 py-1 text-foreground">{node.name}</td>
-                        <td className="px-3 py-1">
-                          <span className="rounded-[3px] bg-muted px-1 py-px text-[10px] text-muted-foreground">
-                            {node.type || '—'}
-                          </span>
-                        </td>
-                        <td className="max-w-0 truncate px-3 py-1 font-mono text-[11px] text-muted-foreground">
+                        <td className="px-3 py-1 text-muted-foreground">{node.type || '—'}</td>
+                        <td className="max-w-0 truncate px-3 py-1 font-mono text-[12px] text-muted-foreground">
                           {node.server}
                         </td>
                         <td className="px-3 py-1 text-right tabular-nums text-muted-foreground">
                           {node.port}
                         </td>
-                        <td className="max-w-0 truncate px-4 py-1 text-muted-foreground">
+                        <td className="max-w-0 truncate py-1 pr-6 pl-3 text-muted-foreground">
                           {node.airportName}
                         </td>
                       </tr>
@@ -580,16 +554,11 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
                 {nodesQuery.isPending ? (
-                  <p className="text-[11px] text-muted-foreground">载入中</p>
+                  <p className="text-[12px] text-muted-foreground">载入中</p>
                 ) : nodes.length === 0 ? (
-                  <>
-                    <p className="text-[13px] font-medium">还没有可用节点</p>
-                    <p className="max-w-xs text-[11px] leading-relaxed text-muted-foreground">
-                      先到「机场」添加订阅并拉取节点，再回来圈选。
-                    </p>
-                  </>
+                  <p className="text-[13px] font-medium">还没有可用节点</p>
                 ) : (
-                  <p className="text-[11px] text-muted-foreground">没有匹配的节点</p>
+                  <p className="text-[12px] text-muted-foreground">没有匹配的节点</p>
                 )}
               </div>
             )}
@@ -599,23 +568,13 @@ export function GroupsPage({ token, path, onNavigate, onReject }: PageProps) {
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
           {groups.length === 0 ? (
             <>
-              <RiLinkM className="size-5 text-muted-foreground" />
               <p className="text-[13px] font-medium">还没有节点组</p>
-              <p className="max-w-sm text-[11px] leading-relaxed text-muted-foreground">
-                节点组是一组手选节点的集合，可以跨机场。在配置页把某份配置的节点来源设成节点组，
-                客户端就只会拿到这一组节点。
-              </p>
               <Button variant="primary" onClick={() => setAdding(true)}>
                 新建节点组
               </Button>
             </>
           ) : (
-            <>
-              <RiCheckLine className="size-5 text-muted-foreground" />
-              <p className="text-[11px] text-muted-foreground">
-                从左侧选择一个节点组，或者新建一个。
-              </p>
-            </>
+            <p className="text-[12px] text-muted-foreground">未选择节点组</p>
           )}
         </div>
       )}

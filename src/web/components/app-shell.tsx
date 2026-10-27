@@ -83,7 +83,7 @@ function NavItem({ to, label, icon: Icon, active, onNavigate }: NavItemProps) {
       aria-current={active ? 'page' : undefined}
       title={label}
       className={cn(
-        'flex h-12 w-full flex-col items-center justify-center gap-1 rounded-control outline-none transition-colors duration-150 ease-out',
+        'flex h-12 w-full flex-col items-center justify-center gap-1 rounded-control outline-none',
         'focus-visible:ring-2 focus-visible:ring-ring/40',
         active
           ? 'bg-muted text-foreground'
@@ -91,7 +91,7 @@ function NavItem({ to, label, icon: Icon, active, onNavigate }: NavItemProps) {
       )}
     >
       <Icon className={cn('size-[18px] shrink-0', active && 'text-primary')} />
-      <span className="text-[10px] leading-none">{label}</span>
+      <span className="text-[12px] leading-none">{label}</span>
     </button>
   );
 }

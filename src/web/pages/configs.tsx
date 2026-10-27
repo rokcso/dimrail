@@ -18,7 +18,7 @@ import type {
 import { AppShell } from '../components/app-shell';
 import { LazyYamlEditor } from '../components/lazy-editor';
 import { PageHeader } from '../components/page-header';
-import { Dot, Status, type Tone } from '../components/status';
+import { Status, type Tone } from '../components/status';
 import { Button } from '../components/ui/button';
 import { ApiError, api } from '../lib/api';
 import { cn, formatBytes, formatStamp, formatTime } from '../lib/utils';
@@ -230,10 +230,10 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
 
   const sidebar = (
     <>
-      <div className="flex h-12 shrink-0 items-center justify-between px-3">
+      <div className="flex h-12 shrink-0 items-center justify-between pr-2 pl-4">
         <div className="flex items-baseline gap-1.5">
-          <span className="text-[11px] font-medium">配置</span>
-          <span className="text-[11px] tabular-nums text-muted-foreground">
+          <span className="text-[12px] font-medium">配置</span>
+          <span className="text-[12px] tabular-nums text-muted-foreground">
             {list.isPending ? '…' : configs.length}
           </span>
         </div>
@@ -242,7 +242,7 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
           title="新建配置"
           onClick={() => create.mutate()}
           disabled={create.isPending}
-          className="flex size-5 items-center justify-center rounded-control text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
+          className="flex size-5 items-center justify-center rounded-control text-muted-foreground outline-none hover:bg-muted hover:text-foreground disabled:opacity-40"
         >
           <RiAddLine className="size-3.5" />
         </button>
@@ -271,7 +271,7 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
               </button>
               <span
                 className={cn(
-                  'pointer-events-none absolute right-2 text-[11px] tabular-nums transition-opacity duration-150 group-hover:opacity-0',
+                  'pointer-events-none absolute right-2 text-[12px] tabular-nums group-hover:opacity-0',
                   isActive ? 'text-accent-foreground/70' : 'text-muted-foreground',
                 )}
               >
@@ -281,7 +281,7 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
                 type="button"
                 title="删除"
                 onClick={() => confirmDelete(item)}
-                className="absolute right-1 flex size-5 items-center justify-center rounded-control text-muted-foreground opacity-0 outline-none transition-opacity duration-150 hover:text-danger focus-visible:opacity-100 group-hover:opacity-100"
+                className="absolute right-1 flex size-5 items-center justify-center rounded-control text-muted-foreground opacity-0 outline-none hover:text-danger focus-visible:opacity-100 group-hover:opacity-100"
               >
                 <RiDeleteBinLine className="size-3.5" />
               </button>
@@ -289,9 +289,9 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
           );
         })}
 
-        {list.isPending && <p className="px-2 py-1 text-[11px] text-muted-foreground">载入中</p>}
+        {list.isPending && <p className="px-2 py-1 text-[12px] text-muted-foreground">载入中</p>}
         {!list.isPending && configs.length === 0 && (
-          <p className="px-2 py-1 text-[11px] text-muted-foreground">还没有配置</p>
+          <p className="px-2 py-1 text-[12px] text-muted-foreground">还没有配置</p>
         )}
       </div>
     </>
@@ -310,7 +310,7 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
               }}
               placeholder="未命名配置"
               maxLength={40}
-              className="-mx-1.5 w-full max-w-sm rounded-control bg-transparent px-1.5 text-[15px] font-medium tracking-tight text-foreground outline-none transition-colors hover:bg-muted focus:bg-muted"
+              className="-mx-1.5 w-full max-w-sm rounded-control bg-transparent px-1.5 text-[15px] font-medium tracking-tight text-foreground outline-none hover:bg-muted focus:bg-muted"
             />
           }
           meta={
@@ -320,9 +320,9 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
                 label={TONE_LABEL[tone]}
                 time={tone === 'saved' ? `更新于 ${formatTime(loaded?.updatedAt ?? null)}` : ''}
               />
-              <Dot />
-              <span className="tabular-nums">
-                {metrics.lines} 行 · {formatBytes(metrics.bytes)}
+              <span className="flex items-center gap-1.5 tabular-nums">
+                <span>{metrics.lines} 行</span>
+                <span>{formatBytes(metrics.bytes)}</span>
               </span>
             </>
           }
@@ -330,11 +330,10 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
             <>
               <select
                 aria-label="节点来源"
-                title="这份配置使用全部节点，还是某个节点组"
                 value={scope}
                 onChange={(event) => changeScope.mutate(event.target.value || null)}
                 disabled={changeScope.isPending}
-                className="h-6 max-w-44 rounded-control border-[0.5px] border-input bg-background px-1.5 text-[11px] text-foreground outline-none disabled:opacity-50"
+                className="h-7 max-w-44 rounded-control border-[0.5px] border-input bg-background px-2 text-[12px] text-foreground outline-none disabled:opacity-50"
               >
                 <option value="">全部节点</option>
                 {scope && !groupOptions.some((group) => group.id === scope) && (
@@ -346,7 +345,7 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
                   </option>
                 ))}
               </select>
-              <Button variant="outline" size="sm" onClick={copyFeed} title={feed}>
+              <Button variant="outline" onClick={copyFeed} title={feed}>
                 {copied ? (
                   <RiCheckLine className="size-3.5 text-primary" />
                 ) : (
@@ -356,7 +355,6 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
               </Button>
               <Button
                 variant="ghost"
-                size="sm"
                 onClick={confirmRegenerate}
                 disabled={regenerate.isPending}
                 title="重新生成订阅链接，旧链接立即失效"
@@ -375,20 +373,13 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
           }
         />
       ) : (
-        <PageHeader
-          title="配置"
-          meta={
-            <span className="tabular-nums">
-              {list.isPending ? '载入中' : `${configs.length} 份`}
-            </span>
-          }
-        />
+        <PageHeader title="配置" />
       )}
 
       {message && (
         <div
           className={cn(
-            'shrink-0 border-b-[0.5px] border-border px-6 py-1.5 text-[11px]',
+            'shrink-0 border-b-[0.5px] border-border px-6 py-1.5 text-[12px]',
             error ? 'text-danger' : 'text-warning',
           )}
         >
@@ -397,7 +388,7 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
       )}
 
       {loaded ? (
-        <div className="min-h-0 flex-1 px-3">
+        <div className="min-h-0 flex-1 px-6">
           <LazyYamlEditor
             className="h-full"
             value={yaml}
@@ -413,13 +404,10 @@ export function ConfigsPage({ token, path, onNavigate, onReject }: PageProps) {
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
           {activeId ? (
-            <p className="text-[11px] text-muted-foreground">载入中</p>
+            <p className="text-[12px] text-muted-foreground">载入中</p>
           ) : (
             <>
               <p className="text-[13px] font-medium">还没有配置</p>
-              <p className="max-w-xs text-[11px] leading-relaxed text-muted-foreground">
-                新建的配置会以「设置 → 基础配置」为起点，每份有独立的订阅链接。
-              </p>
               <Button variant="primary" onClick={() => create.mutate()} disabled={create.isPending}>
                 新建配置
               </Button>
