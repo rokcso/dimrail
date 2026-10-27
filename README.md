@@ -87,6 +87,9 @@ pnpm dev
 ```
 
 - 后台：<http://localhost:5173/admin>（口令见 `.dev.vars` 的 `ADMIN_TOKEN`）
+- 改完迁移**先停 `pnpm dev`** 再动 `.wrangler/state`：跑着的 workerd 手里那个 SQLite
+  句柄会失效，之后每个接口都回 `internal error; reference = …`（看着像功能坏了，
+  其实重启 dev 就好）。线上同款文案则先确认 `pnpm db:migrate:remote` 跑过。
 - 订阅链接：在后台新建配置后，从页面底部复制
 
 开发时后台走 Vite（5173），订阅接口在 Worker（8787），两者通过 `/api` 代理连接。

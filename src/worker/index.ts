@@ -158,8 +158,20 @@ async function handleApi(request: Request, env: Bindings, path: string): Promise
   } catch (err) {
     // 线上出问题时 wrangler tail 里能看到是哪一步炸的
     console.error(`${request.method} ${path}`, err);
-    return json({ error: errorMessage(err) }, 500);
+    return json({ error: errorHint(errorMessage(err)) }, 500);
   }
+}
+
+/**
+ * D1 本地连接坏掉时只回一句 `internal error; reference = …`，看着像业务错误，
+ * 实际是数据库句柄废了（典型：dev 还跑着就把 .wrangler/state 删了）。
+ * 补一句人话，省得又当功能 bug 排查一遍。
+ */
+function errorHint(message: string): string {
+  if (/^internal error; reference = /.test(message)) {
+    return `${message}（本地 D1 连不上了：重启 pnpm dev；线上则确认 pnpm db:migrate:remote 跑过）`;
+  }
+  return message;
 }
 
 async function routeApi(request: Request, env: Bindings, path: string): Promise<Response> {
