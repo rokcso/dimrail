@@ -1,7 +1,30 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "dimrail",
-  "main": "workers/src/worker.js",
+  "main": "src/worker/index.ts",
   "compatibility_date": "2026-08-03",
-  "workers_dev": true
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+
+  // 前端产物：pnpm build → dist/client
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/", "/api/*"]
+  },
+
+  // 部署前用 `wrangler d1 create dimrail` 创建并替换 database_id
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "dimrail",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "./migrations"
+    }
+  ],
+
+  "observability": {
+    "logs": { "enabled": true, "invocation_logs": false }
+  }
 }

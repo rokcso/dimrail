@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+
+/* Radix 12 阶语义映射：背景只用 1/2/3，边框只用 6/7，文字只用 11/12 */
+@theme inline {
+  --color-background: var(--gray-1);
+  --color-surface: var(--gray-2);
+  --color-muted: var(--gray-3);
+  --color-border: var(--gray-6);
+  --color-input: var(--gray-7);
+  --color-foreground: var(--gray-12);
+  --color-muted-foreground: var(--gray-11);
+  --color-ring: var(--grass-8);
+  --color-primary: var(--grass-11);
+  --color-primary-hover: var(--grass-12);
+  --color-primary-foreground: #ffffff;
+  --color-accent: var(--grass-3);
+  --color-accent-foreground: var(--grass-11);
+  --color-warning: var(--amber-11);
+  --color-danger: var(--red-11);
+
+  --radius-card: 8px;
+  --radius-control: 6px;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--gray-1);
+  color: var(--gray-12);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: var(--grass-4);
+}
+
+/* ── CodeMirror ─────────────────────────────────────────────── */
+.cm-editor {
+  height: 100%;
+  background: var(--gray-1);
+  color: var(--gray-12);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.cm-editor.cm-focused {
+  outline: none;
+}
+.cm-editor .cm-scroller {
+  font-family: var(--font-mono);
+  line-height: 1.65;
+  padding-bottom: 40vh; /* 末尾留白，最后几行也能滚到视线中部 */
+}
+.cm-editor .cm-content {
+  padding: 12px 0;
+}
+.cm-editor .cm-gutters {
+  background: var(--gray-1);
+  color: var(--gray-9);
+  border: 0;
+  padding-left: 8px;
+  padding-right: 4px;
+  user-select: none;
+}
+.cm-editor .cm-lineNumbers .cm-gutterElement {
+  padding: 0 8px 0 4px;
+}
+.cm-editor .cm-activeLine,
+.cm-editor .cm-activeLineGutter {
+  background: transparent;
+}
+.cm-editor .cm-selectionBackground,
+.cm-editor.cm-focused .cm-selectionBackground {
+  background: var(--grass-4) !important;
+}
+.cm-editor .cm-cursor {
+  border-left: 0.5px solid var(--grass-11);
+}
+.cm-editor .cm-placeholder {
+  color: var(--gray-9);
+}
+/* YAML 语法着色：只用 gray / grass 两族，避免第三套配色 */
+.cm-editor .tok-keyword,
+.cm-editor .tok-propertyName {
+  color: var(--grass-11);
+}
+.cm-editor .tok-string,
+.cm-editor .tok-string2 {
+  color: var(--gray-12);
+}
+.cm-editor .tok-number,
+.cm-editor .tok-bool,
+.cm-editor .tok-null {
+  color: var(--gray-11);
+}
+.cm-editor .tok-comment {
+  color: var(--gray-9);
+  font-style: normal;
+}
+.cm-editor .tok-punctuation {
+  color: var(--gray-10);
+}
