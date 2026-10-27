@@ -39,6 +39,12 @@ async function request<T>(path: string, token: string, init: RequestInit = {}): 
 
 export const api = {
   get: <T>(path: string, token: string) => request<T>(path, token),
+  post: <T>(path: string, token: string, body?: unknown) =>
+    request<T>(path, token, {
+      method: 'POST',
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    }),
   put: <T>(path: string, token: string, body: unknown) =>
     request<T>(path, token, { method: 'PUT', body: JSON.stringify(body) }),
+  del: <T>(path: string, token: string) => request<T>(path, token, { method: 'DELETE' }),
 };

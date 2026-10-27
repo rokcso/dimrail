@@ -1,3 +1,4 @@
+# 机场订阅映射：{"airport-a":"https://sub.example/link/xxx"}
 PROVIDERS_JSON='{"airport-a":"https://example.com/sub?client=clashmetasimple"}'
-ACCESS_TOKEN='dev-token-please-change'
+# 管理口令：/admin 与 /api/*
 ADMIN_TOKEN='dev-admin-token'

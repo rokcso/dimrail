@@ -16,3 +16,12 @@ export function formatTime(ts: number | null): string {
   const pad = (value: number) => String(value).padStart(2, '0');
   return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
+
+/** 列表用的短时间：今天只给时分，更早给月-日。 */
+export function formatStamp(ts: number | null): string {
+  if (!ts) return '';
+  const date = new Date(ts);
+  const pad = (value: number) => String(value).padStart(2, '0');
+  if (date.toDateString() === new Date().toDateString()) return formatTime(ts);
+  return `${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
