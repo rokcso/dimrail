@@ -37,16 +37,51 @@ export async function loadBase(env: Bindings): Promise<LoadedBase> {
   return { yaml: CONFIG_TEMPLATE, updatedAt: null, seeded: true };
 }
 
-export async function saveBase(env: Bindings, yaml: string): Promise<number> {
-  const updatedAt = Date.now();
-  await requireDb(env)
-    .prepare(
-      `INSERT INTO base_config (id, yaml, updated_at) VALUES (?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET yaml = excluded.yaml, updated_at = excluded.updated_at`,
-    )
-    .bind(BASE_ID, yaml, updatedAt)
+export type WriteResult =
+  | { ok: true; updatedAt: number }
+  | { ok: false; reason: 'conflict' | 'missing' };
+
+export async function saveBase(
+  env: Bindings,
+  yaml: string,
+  expectedUpdatedAt?: number | null,
+): Promise<WriteResult> {
+  const db = requireDb(env);
+  const updatedAt =
+    typeof expectedUpdatedAt === 'number'
+      ? Math.max(Date.now(), expectedUpdatedAt + 1)
+      : Date.now();
+
+  if (expectedUpdatedAt === undefined) {
+    await db
+      .prepare(
+        `INSERT INTO base_config (id, yaml, updated_at) VALUES (?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET yaml = excluded.yaml, updated_at = excluded.updated_at`,
+      )
+      .bind(BASE_ID, yaml, updatedAt)
+      .run();
+    return { ok: true, updatedAt };
+  }
+
+  if (expectedUpdatedAt === null) {
+    const result = await db
+      .prepare(
+        'INSERT INTO base_config (id, yaml, updated_at) VALUES (?, ?, ?) ON CONFLICT(id) DO NOTHING',
+      )
+      .bind(BASE_ID, yaml, updatedAt)
+      .run();
+    return (result.meta.changes ?? 0) > 0
+      ? { ok: true, updatedAt }
+      : { ok: false, reason: 'conflict' };
+  }
+
+  const result = await db
+    .prepare('UPDATE base_config SET yaml = ?, updated_at = ? WHERE id = ? AND updated_at = ?')
+    .bind(yaml, updatedAt, BASE_ID, expectedUpdatedAt)
     .run();
-  return updatedAt;
+  return (result.meta.changes ?? 0) > 0
+    ? { ok: true, updatedAt }
+    : { ok: false, reason: 'conflict' };
 }
 
 /** 恢复出厂：删掉 D1 那一行，读接口重新回落构建期模板。 */
@@ -151,18 +186,32 @@ export async function updateConfig(
   env: Bindings,
   id: string,
   patch: { yaml?: string; name?: string; poolId?: string | null },
-): Promise<{ updatedAt: number } | null> {
+  expectedUpdatedAt?: number | null,
+): Promise<WriteResult> {
   const current = await getConfig(env, id);
-  if (!current) return null;
+  if (!current) return { ok: false, reason: 'missing' };
 
-  const updatedAt = Date.now();
+  const updatedAt = Math.max(Date.now(), current.updatedAt + 1);
   const poolId = patch.poolId === undefined ? current.poolId : patch.poolId;
-  await requireDb(env)
-    .prepare('UPDATE configs SET yaml = ?, name = ?, pool_id = ?, updated_at = ? WHERE id = ?')
-    .bind(patch.yaml ?? current.yaml, patch.name?.trim() || current.name, poolId, updatedAt, id)
+  const expected = expectedUpdatedAt === undefined ? current.updatedAt : expectedUpdatedAt;
+  const result = await requireDb(env)
+    .prepare(
+      'UPDATE configs SET yaml = ?, name = ?, pool_id = ?, updated_at = ? WHERE id = ? AND updated_at = ?',
+    )
+    .bind(
+      patch.yaml ?? current.yaml,
+      patch.name?.trim() || current.name,
+      poolId,
+      updatedAt,
+      id,
+      expected,
+    )
     .run();
 
-  return { updatedAt };
+  if ((result.meta.changes ?? 0) === 0) {
+    return { ok: false, reason: 'conflict' };
+  }
+  return { ok: true, updatedAt };
 }
 
 export async function deleteConfig(env: Bindings, id: string): Promise<boolean> {

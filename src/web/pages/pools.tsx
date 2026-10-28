@@ -203,9 +203,9 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
   const rename = useMutation({
     mutationFn: (input: { id: string; name: string }) =>
       api.patch<NodePoolSummary>(`/api/pools/${input.id}`, token, { name: input.name }),
-    onSuccess: async (_updated, input) => {
+    onSuccess: async (updated, input) => {
       queryClient.setQueryData<NodePoolDetail>(['pool', input.id], (prev) =>
-        prev ? { ...prev, name: input.name, updatedAt: Date.now() } : prev,
+        prev ? { ...prev, name: input.name, updatedAt: updated.updatedAt } : prev,
       );
       setError('');
       await refreshPools();
@@ -221,6 +221,33 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
     mutationFn: (id: string) => api.del<{ ok: boolean }>(`/api/pools/${id}`, token),
     onSuccess: async (_data, id) => {
       queryClient.removeQueries({ queryKey: ['pool', id] });
+      setError('');
+      await refreshPools();
+    },
+    onError: onMutationError,
+  });
+
+  const reconcile = useMutation({
+    mutationFn: () =>
+      api.post<{ removed: number; nodeCount: number; availableCount: number; updatedAt: number }>(
+        `/api/pools/${selectedId}/reconcile`,
+        token,
+      ),
+    onSuccess: async (data) => {
+      const prune = (keys: Set<string>) => new Set([...keys].filter((key) => nodeKeys.has(key)));
+      setSelectedKeys((prev) => prune(prev));
+      setSavedKeys((prev) => prune(prev));
+      queryClient.setQueryData<NodePoolDetail>(['pool', selectedId], (prev) =>
+        prev
+          ? {
+              ...prev,
+              members: prev.members.filter((member) => nodeKeys.has(nodeKey(member))),
+              nodeCount: data.nodeCount,
+              availableCount: data.availableCount,
+              updatedAt: data.updatedAt,
+            }
+          : prev,
+      );
       setError('');
       await refreshPools();
     },
@@ -258,8 +285,6 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
   }, [search, airportFilter, typeFilter, selectedId]);
 
   const nodeKeys = useMemo(() => new Set(nodes.map(nodeKey)), [nodes]);
-
-  const staleCount = [...selectedKeys].filter((key) => !nodeKeys.has(key)).length;
 
   const airports = useMemo(() => {
     const map = new Map<string, string>();
@@ -332,10 +357,6 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
       return { airportId, name, type };
     });
     saveMembers.mutate({ members, expectedUpdatedAt: loaded?.updatedAt ?? null });
-  };
-
-  const dropStale = () => {
-    setSelectedKeys((prev) => new Set([...prev].filter((key) => nodeKeys.has(key))));
   };
 
   const openRule = () => {
@@ -433,9 +454,11 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
                 className={cn(
                   'pointer-events-none absolute right-2 text-[12px] tabular-nums group-hover:opacity-0',
                   isActive ? 'text-accent-foreground/70' : 'text-muted-foreground',
+                  pool.availableCount < pool.nodeCount && 'text-warning',
                 )}
+                title={`${pool.availableCount} 可用 / ${pool.nodeCount} 已选`}
               >
-                {pool.nodeCount}
+                {pool.availableCount}
               </span>
               <button
                 type="button"
@@ -479,15 +502,18 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
               <Status tone={tone} label={TONE_LABEL[tone]} />
               <span className="tabular-nums">{selectedKeys.size} 个已选</span>
               <span className="tabular-nums">{nodes.length} 个节点</span>
-              {staleCount > 0 && (
+              {active.nodeCount > active.availableCount && (
                 <>
-                  <span className="text-warning">{staleCount} 个已选节点不可用</span>
+                  <span className="text-warning">
+                    {active.nodeCount - active.availableCount} 个成员已失效
+                  </span>
                   <button
                     type="button"
-                    onClick={dropStale}
-                    className="text-[12px] text-muted-foreground underline-offset-2 outline-none hover:text-foreground hover:underline"
+                    onClick={() => reconcile.mutate()}
+                    disabled={reconcile.isPending}
+                    className="text-[12px] text-muted-foreground underline-offset-2 outline-none hover:text-foreground hover:underline disabled:opacity-50"
                   >
-                    清理
+                    {reconcile.isPending ? '清理中' : '清理失效成员'}
                   </button>
                 </>
               )}

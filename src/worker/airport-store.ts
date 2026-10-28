@@ -14,8 +14,11 @@ export interface ProviderRef {
   name: string;
 }
 
-const SUMMARY_COLUMNS =
-  'id, name, url, enabled, position, node_count, userinfo, fetched_at, error, error_at, truncated, created_at, updated_at';
+const SUMMARY_COLUMNS = `
+  id, name, url, enabled, position,
+  (SELECT COUNT(*) FROM airport_nodes AS n WHERE n.airport_id = airports.id) AS node_count,
+  userinfo, fetched_at, error, error_at, truncated, created_at, updated_at
+`;
 
 interface AirportRow {
   id: string;
@@ -171,7 +174,9 @@ export async function countAirports(env: Bindings): Promise<number> {
 
 export async function countNodes(env: Bindings): Promise<number> {
   const row = await requireDb(env)
-    .prepare('SELECT COALESCE(SUM(node_count), 0) AS n FROM airports WHERE enabled = 1')
+    .prepare(
+      'SELECT COUNT(*) AS n FROM airport_nodes AS n JOIN airports AS a ON a.id = n.airport_id WHERE a.enabled = 1',
+    )
     .first<{ n: number }>();
   return row?.n ?? 0;
 }
@@ -272,7 +277,7 @@ export async function updateAirport(
   }
   await db
     .prepare(
-      `UPDATE airports SET name = ?, url = ?, enabled = ?, updated_at = ?${urlChanged ? ', node_count = 0, userinfo = NULL, fetched_at = NULL, error = NULL, error_at = NULL, truncated = 0, refresh_lock = NULL' : ''}
+      `UPDATE airports SET name = ?, url = ?, enabled = ?, updated_at = ?${urlChanged ? ', userinfo = NULL, fetched_at = NULL, error = NULL, error_at = NULL, truncated = 0, refresh_lock = NULL' : ''}
        WHERE id = ?`,
     )
     .bind(next.name, next.url, next.enabled, updatedAt, id)
@@ -374,12 +379,12 @@ export async function saveNodes(
 
   await db
     .prepare(
-      `UPDATE airports SET node_count = ?, userinfo = COALESCE(?, userinfo),
+      `UPDATE airports SET userinfo = COALESCE(?, userinfo),
          fetched_at = ?, error = NULL, error_at = NULL, truncated = ?,
          refresh_lock = NULL, updated_at = ?
        WHERE id = ?`,
     )
-    .bind(nodes.length, userinfo, now, truncated ? 1 : 0, now, id)
+    .bind(userinfo, now, truncated ? 1 : 0, now, id)
     .run();
 }
 

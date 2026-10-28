@@ -24,7 +24,6 @@ CREATE TABLE `airports` (
   `url` text NOT NULL,
   `enabled` integer NOT NULL DEFAULT 1,
   `position` integer NOT NULL DEFAULT 0,
-  `node_count` integer NOT NULL DEFAULT 0,
   `userinfo` text,
   `fetched_at` integer,
   `error` text,

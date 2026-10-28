@@ -5,13 +5,26 @@ import type { ProxyNode } from './subscription';
 
 const SUMMARY_COLUMNS = `
   g.id, g.name, g.created_at, g.updated_at,
-  (SELECT COUNT(*) FROM node_pool_nodes AS m WHERE m.pool_id = g.id) AS node_count
+  (SELECT COUNT(*) FROM node_pool_nodes AS m WHERE m.pool_id = g.id) AS node_count,
+  (SELECT COUNT(*)
+   FROM node_pool_nodes AS m
+   WHERE m.pool_id = g.id
+     AND EXISTS (
+       SELECT 1
+       FROM airports AS a
+       JOIN airport_nodes AS n
+         ON n.airport_id = m.airport_id
+        AND n.name = m.node_name
+        AND n.type = m.node_type
+       WHERE a.id = m.airport_id AND a.enabled = 1
+     )) AS available_count
 `;
 
 interface PoolRow {
   id: string;
   name: string;
   node_count: number;
+  available_count: number;
   created_at: number;
   updated_at: number;
 }
@@ -36,6 +49,7 @@ function toSummary(row: PoolRow): NodePoolSummary {
     id: row.id,
     name: row.name,
     nodeCount: row.node_count,
+    availableCount: row.available_count,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -104,7 +118,7 @@ export async function createPool(env: Bindings, name: string): Promise<NodePoolS
       .bind(id, name, now, now)
       .run();
 
-    return { id, name, nodeCount: 0, createdAt: now, updatedAt: now };
+    return { id, name, nodeCount: 0, availableCount: 0, createdAt: now, updatedAt: now };
   }
 
   throw new Error('生成节点池 ID 失败，请重试');
@@ -115,10 +129,10 @@ export async function renamePool(
   id: string,
   name: string,
 ): Promise<NodePoolSummary | null> {
-  const updatedAt = Date.now();
+  const now = Date.now();
   const result = await requireDb(env)
-    .prepare('UPDATE node_pools SET name = ?, updated_at = ? WHERE id = ?')
-    .bind(name, updatedAt, id)
+    .prepare('UPDATE node_pools SET name = ?, updated_at = MAX(updated_at + 1, ?) WHERE id = ?')
+    .bind(name, now, id)
     .run();
   if ((result.meta.changes ?? 0) === 0) return null;
   return getPoolSummary(env, id);
@@ -134,12 +148,41 @@ export async function deletePool(env: Bindings, id: string): Promise<boolean> {
 }
 
 /** 整池覆盖成员：先删再加。按（机场, 名字, 类型）去重。 */
+export type PoolWriteResult =
+  | { ok: true; nodeCount: number; updatedAt: number }
+  | { ok: false; reason: 'conflict' | 'missing' };
+
 export async function setPoolMembers(
   env: Bindings,
   id: string,
   members: NodePoolMember[],
-): Promise<number> {
+  expectedUpdatedAt?: number | null,
+): Promise<PoolWriteResult> {
   const db = requireDb(env);
+  const updatedAt =
+    typeof expectedUpdatedAt === 'number'
+      ? Math.max(Date.now(), expectedUpdatedAt + 1)
+      : Date.now();
+
+  // 先抢占版本：同一版本只有一个请求能继续写成员。
+  const claim =
+    expectedUpdatedAt === undefined
+      ? await db
+          .prepare('UPDATE node_pools SET updated_at = ? WHERE id = ?')
+          .bind(updatedAt, id)
+          .run()
+      : await db
+          .prepare('UPDATE node_pools SET updated_at = ? WHERE id = ? AND updated_at = ?')
+          .bind(updatedAt, id, expectedUpdatedAt)
+          .run();
+  if ((claim.meta.changes ?? 0) === 0) {
+    const exists = await db
+      .prepare('SELECT 1 AS hit FROM node_pools WHERE id = ?')
+      .bind(id)
+      .first();
+    return { ok: false, reason: exists ? 'conflict' : 'missing' };
+  }
+
   const unique = new Map<string, NodePoolMember>();
   for (const member of members) {
     unique.set(`${member.airportId}\u0000${member.name}\u0000${member.type}`, member);
@@ -177,16 +220,11 @@ export async function setPoolMembers(
     if (rows.length === 0) {
       await db.prepare('DELETE FROM node_pool_nodes WHERE pool_id = ?').bind(id).run();
     }
-
-    await db
-      .prepare('UPDATE node_pools SET updated_at = ? WHERE id = ?')
-      .bind(Date.now(), id)
-      .run();
   } catch (err) {
     throw new Error(`写入 ${rows.length} 个节点成员失败：${message(err)}`);
   }
 
-  return rows.length;
+  return { ok: true, nodeCount: rows.length, updatedAt };
 }
 
 /**
@@ -267,6 +305,39 @@ export async function hasAvailablePoolNodes(env: Bindings, id: string): Promise<
     .bind(id)
     .first();
   return Boolean(row);
+}
+
+/** 清理已经不存在（改名/删除）的成员，停用机场的成员保留。 */
+export async function reconcilePool(
+  env: Bindings,
+  id: string,
+): Promise<{ removed: number; summary: NodePoolSummary } | null> {
+  const db = requireDb(env);
+  if (!(await getPoolSummary(env, id))) return null;
+
+  const result = await db
+    .prepare(
+      `DELETE FROM node_pool_nodes
+       WHERE pool_id = ?
+         AND NOT EXISTS (
+           SELECT 1 FROM airport_nodes AS n
+           WHERE n.airport_id = node_pool_nodes.airport_id
+             AND n.name = node_pool_nodes.node_name
+             AND n.type = node_pool_nodes.node_type
+         )`,
+    )
+    .bind(id)
+    .run();
+  const removed = result.meta.changes ?? 0;
+  if (removed > 0) {
+    await db
+      .prepare('UPDATE node_pools SET updated_at = ? WHERE id = ?')
+      .bind(Date.now(), id)
+      .run();
+  }
+
+  const summary = await getPoolSummary(env, id);
+  return summary ? { removed, summary } : null;
 }
 
 /** 机场被删除或换链接时，把它从所有池里摘掉。 */

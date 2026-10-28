@@ -89,6 +89,7 @@ GET  /api/pools/<id>             读取节点池（含成员引用）
 PATCH /api/pools/<id>            改名
 DELETE /api/pools/<id>           删除（被配置使用时返回 409）
 PUT  /api/pools/<id>/nodes       整池覆盖成员
+POST /api/pools/<id>/reconcile   清理已不存在的成员
 ```
 
 ## 依赖的 Secret

@@ -63,6 +63,7 @@ import {
   hasAvailablePoolNodes,
   listPools,
   nameTaken as poolNameTaken,
+  reconcilePool,
   renamePool,
   setPoolMembers,
 } from './pool-store';
@@ -81,7 +82,7 @@ import { validateConfig } from './validate';
 const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8' };
 const CONFIG_ID = /^\/api\/configs\/([A-Za-z0-9_-]{1,32})(\/token|\/preview)?$/;
 const AIRPORT_ID = /^\/api\/airports\/([A-Za-z0-9_-]{1,32})(\/refresh)?$/;
-const POOL_ID = /^\/api\/pools\/([A-Za-z0-9_-]{1,32})(\/nodes)?$/;
+const POOL_ID = /^\/api\/pools\/([A-Za-z0-9_-]{1,32})(\/nodes|\/reconcile)?$/;
 
 export default {
   async fetch(request: Request, env: Bindings): Promise<Response> {
@@ -325,16 +326,11 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
       const result = validateConfig(payload.data.yaml);
       if (!result.ok) return json({ error: result.error }, 400);
 
-      const base = await loadBase(env);
-      if (
-        payload.data.expectedUpdatedAt !== undefined &&
-        base.updatedAt !== payload.data.expectedUpdatedAt
-      ) {
+      const saved = await saveBase(env, payload.data.yaml, payload.data.expectedUpdatedAt);
+      if (!saved.ok) {
         return json({ error: '基础配置已在别处修改，请刷新后重试' }, 409);
       }
-
-      const updatedAt = await saveBase(env, payload.data.yaml);
-      return json({ updatedAt, notices: result.notices } satisfies SaveResponse);
+      return json({ updatedAt: saved.updatedAt, notices: result.notices } satisfies SaveResponse);
     }
     return methodNotAllowed();
   }
@@ -477,22 +473,34 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
   const poolMatch = POOL_ID.exec(path);
   const poolId = poolMatch?.[1];
   if (poolId) {
-    if (poolMatch[2]) {
+    if (poolMatch[2] === '/nodes') {
       if (method !== 'PUT') return methodNotAllowed();
       const payload = nodePoolMembersPayloadSchema.safeParse(await readJson(request));
       if (!payload.success) return json({ error: firstIssue(payload.error) }, 400);
-      const summary = await getPoolSummary(env, poolId);
-      if (!summary) return json({ error: '节点池不存在' }, 404);
-      if (
-        payload.data.expectedUpdatedAt !== undefined &&
-        summary.updatedAt !== payload.data.expectedUpdatedAt
-      ) {
-        return json({ error: '节点池已在别处修改，请刷新后重试' }, 409);
+      const saved = await setPoolMembers(
+        env,
+        poolId,
+        payload.data.members,
+        payload.data.expectedUpdatedAt,
+      );
+      if (!saved.ok) {
+        return saved.reason === 'missing'
+          ? json({ error: '节点池不存在' }, 404)
+          : json({ error: '节点池已在别处修改，请刷新后重试' }, 409);
       }
+      return json({ ok: true, nodeCount: saved.nodeCount, updatedAt: saved.updatedAt });
+    }
 
-      const nodeCount = await setPoolMembers(env, poolId, payload.data.members);
-      const updated = await getPoolSummary(env, poolId);
-      return json({ ok: true, nodeCount, updatedAt: updated?.updatedAt ?? Date.now() });
+    if (poolMatch[2] === '/reconcile') {
+      if (method !== 'POST') return methodNotAllowed();
+      const result = await reconcilePool(env, poolId);
+      if (!result) return json({ error: '节点池不存在' }, 404);
+      return json({
+        removed: result.removed,
+        nodeCount: result.summary.nodeCount,
+        availableCount: result.summary.availableCount,
+        updatedAt: result.summary.updatedAt,
+      });
     }
 
     if (method === 'GET') {
@@ -564,17 +572,12 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
     if (payload.data.poolId && !(await getPoolSummary(env, payload.data.poolId))) {
       return json({ error: '节点池不存在' }, 400);
     }
-    const current = await getConfig(env, id);
-    if (!current) return json({ error: '配置不存在' }, 404);
-    if (
-      payload.data.expectedUpdatedAt !== undefined &&
-      current.updatedAt !== payload.data.expectedUpdatedAt
-    ) {
-      return json({ error: '配置已在别处修改，请刷新后重试' }, 409);
+    const updated = await updateConfig(env, id, payload.data, payload.data.expectedUpdatedAt);
+    if (!updated.ok) {
+      return updated.reason === 'missing'
+        ? json({ error: '配置不存在' }, 404)
+        : json({ error: '配置已在别处修改，请刷新后重试' }, 409);
     }
-
-    const updated = await updateConfig(env, id, payload.data);
-    if (!updated) return json({ error: '配置不存在' }, 404);
     return json({ updatedAt: updated.updatedAt, notices } satisfies SaveResponse);
   }
 

@@ -203,6 +203,8 @@ export interface NodePoolSummary {
   name: string;
   /** 池里记录了多少个成员（可能包含当前已不可用的节点） */
   nodeCount: number;
+  /** 当前能匹配到启用机场节点的成员数 */
+  availableCount: number;
   createdAt: number;
   updatedAt: number;
 }
