@@ -8,10 +8,10 @@ const sources: ProviderSource[] = [
 
 describe('buildProvidersYaml', () => {
   it('机场与节点池走各自的 URL 和缓存文件', () => {
-    const yaml = buildProvidersYaml(sources, 'https://sub.example.com', 'tok');
-    expect(yaml).toContain('url: https://sub.example.com/providers/airports/a1?token=tok');
+    const yaml = buildProvidersYaml(sources, 'https://sub.example.com', 'cfg1', 'tok');
+    expect(yaml).toContain('url: https://sub.example.com/sub/cfg1/providers/airports/a1?token=tok');
     expect(yaml).toContain('path: ./providers/a1.yaml');
-    expect(yaml).toContain('url: https://sub.example.com/providers/pools/g1?token=tok');
+    expect(yaml).toContain('url: https://sub.example.com/sub/cfg1/providers/pools/g1?token=tok');
     expect(yaml).toContain('path: ./providers/pool-g1.yaml');
   });
 
@@ -23,6 +23,7 @@ describe('buildProvidersYaml', () => {
         { id: 'a3', name: 'null', kind: 'airport' },
       ],
       'https://example.com',
+      'cfg1',
       'tok',
     );
     expect(yaml).toContain('  "true":');

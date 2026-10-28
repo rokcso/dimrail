@@ -1,15 +1,21 @@
-import { stringify } from 'yaml';
 import {
   type AirportRecord,
+  acquireRefreshLock,
   getAirport,
   listUserinfo,
   markError,
+  releaseRefreshLock,
   saveNodes,
 } from './airport-store';
 import type { Bindings } from './env';
-import { getPoolSummary, listPoolNodes } from './pool-store';
-import type { ProxyNode } from './subscription';
-import { fetchSubscription } from './subscription';
+import { fnv1a } from './hash';
+import {
+  getPoolSummary,
+  hasAvailablePoolNodes,
+  listPoolNodes,
+  listPoolUserinfo,
+} from './pool-store';
+import { fetchSubscription, stringifyProxies } from './subscription';
 
 /** 中转缓存的有效期：超过就回源，回源失败仍吐旧的。 */
 const CACHE_TTL_MS = 3 * 60 * 60 * 1000;
@@ -30,6 +36,7 @@ export interface ProviderSource {
 export function buildProvidersYaml(
   sources: ProviderSource[],
   origin: string,
+  configId: string,
   token: string,
 ): string {
   return sources
@@ -39,7 +46,7 @@ export function buildProvidersYaml(
       return [
         `  ${yamlKey(source.name)}:`,
         '    type: http',
-        `    url: ${origin}/${segment}/${encodeURIComponent(source.id)}?token=${encodeURIComponent(token)}`,
+        `    url: ${origin}/sub/${configId}/${segment}/${encodeURIComponent(source.id)}?token=${encodeURIComponent(token)}`,
         '    interval: 10800',
         `    path: ./providers/${file}.yaml`,
         '    health-check:',
@@ -83,9 +90,10 @@ export function aggregateUserinfo(values: string[]): string {
 }
 
 /** 顶层订阅响应头里的用量，读缓存而不是打上游。 */
-export async function aggregatedUserinfo(env: Bindings): Promise<string> {
+export async function aggregatedUserinfo(env: Bindings, poolId?: string | null): Promise<string> {
   try {
-    return aggregateUserinfo(await listUserinfo(env));
+    const values = poolId ? await listPoolUserinfo(env, poolId) : await listUserinfo(env);
+    return aggregateUserinfo(values);
   } catch {
     return '';
   }
@@ -95,65 +103,115 @@ export async function aggregatedUserinfo(env: Bindings): Promise<string> {
  * 机场订阅中转：缓存新鲜就直接吐，过期回源；回源失败吐旧缓存（X-Cache: stale）。
  * 效果是机场短时间抽风时，客户端拉到的还是上一次的节点，而不是空。
  */
-export async function relayProvider(env: Bindings, id: string): Promise<Response> {
+export async function relayProvider(
+  env: Bindings,
+  request: Request,
+  id: string,
+): Promise<Response> {
   const airport = await getAirport(env, id);
   if (!airport) return text('机场不存在', 404);
   if (!airport.enabled) return text('机场已禁用', 404);
 
   const hasCache = airport.nodes.length > 0;
   const age = airport.fetchedAt ? Date.now() - airport.fetchedAt : Number.POSITIVE_INFINITY;
-  if (hasCache && age < CACHE_TTL_MS) return providerYaml(airport, 'hit');
-
-  const result = await fetchSubscription(airport.url);
-  if (result.ok) {
-    await saveNodes(env, id, result.nodes, result.userinfo);
-    return providerYaml(
-      {
-        ...airport,
-        nodes: result.nodes,
-        nodeCount: result.nodes.length,
-        userinfo: result.userinfo ?? airport.userinfo,
-        fetchedAt: Date.now(),
-        error: null,
-        errorAt: null,
-      },
-      'miss',
-    );
+  if (hasCache && age < CACHE_TTL_MS) {
+    return providerResponse(request, await cachedProviderYaml(airport), {
+      cache: 'hit',
+      userinfo: airport.userinfo,
+    });
   }
 
-  await markError(env, id, result.error);
-  if (hasCache) return providerYaml(airport, 'stale');
-  return text(`拉取 ${airport.name} 失败：${result.error}`, 502);
+  const locked = await acquireRefreshLock(env, id);
+  if (!locked) {
+    if (hasCache) {
+      return providerResponse(request, await cachedProviderYaml(airport), {
+        cache: 'stale',
+        userinfo: airport.userinfo,
+      });
+    }
+    return text('正在刷新，请稍后重试', 503);
+  }
+
+  try {
+    const result = await fetchSubscription(airport.url);
+    if (result.ok) {
+      await saveNodes(env, id, result.nodes, result.userinfo, result.truncated);
+      return providerResponse(request, stringifyProxies(result.nodes), {
+        cache: 'miss',
+        userinfo: result.userinfo ?? airport.userinfo,
+      });
+    }
+
+    await markError(env, id, result.error);
+  } finally {
+    await releaseRefreshLock(env, id);
+  }
+
+  if (hasCache) {
+    return providerResponse(request, await cachedProviderYaml(airport), {
+      cache: 'stale',
+      userinfo: airport.userinfo,
+    });
+  }
+  const refreshed = await getAirport(env, id);
+  return text(`拉取 ${airport.name} 失败：${refreshed?.error ?? '未知错误'}`, 502);
 }
 
-function providerYaml(airport: AirportRecord, cache: 'hit' | 'miss' | 'stale'): Response {
+/** 序列化结果放 Colo 缓存，避免每次请求重新 parse/stringify；不占 D1 单值上限。 */
+async function cachedProviderYaml(airport: AirportRecord): Promise<string> {
+  const key = new Request(
+    `https://provider.internal/airports/${airport.id}/${airport.fetchedAt ?? 0}`,
+  );
+  try {
+    const hit = await caches.default.match(key);
+    if (hit) return hit.text();
+  } catch {
+    // 本地/cache 不可用时退回直接序列化
+  }
+
+  const yaml = stringifyProxies(airport.nodes);
+  try {
+    await caches.default.put(
+      key,
+      new Response(yaml, { headers: { 'Cache-Control': 'public, max-age=86400' } }),
+    );
+  } catch {
+    // ignore
+  }
+  return yaml;
+}
+
+function providerResponse(
+  request: Request,
+  yaml: string,
+  options: { cache?: 'hit' | 'miss' | 'stale'; userinfo?: string | null },
+): Response {
   const headers: Record<string, string> = {
     'Content-Type': 'text/yaml; charset=utf-8',
     'Cache-Control': 'private, no-store',
     'Profile-Update-Interval': '10800',
-    'X-Cache': cache,
+    ETag: `"${fnv1a(yaml)}"`,
   };
-  if (airport.userinfo) headers['Subscription-Userinfo'] = airport.userinfo;
+  if (options.cache) headers['X-Cache'] = options.cache;
+  if (options.userinfo) headers['Subscription-Userinfo'] = options.userinfo;
 
-  return proxiesResponse(airport.nodes, headers);
+  if (request.headers.get('if-none-match') === headers.ETag) {
+    return new Response(null, { status: 304, headers });
+  }
+
+  return new Response(yaml, { status: 200, headers });
 }
 
 /** 节点池不是一个可回源的机场，只从 D1 读成员当前对应的节点。 */
-export async function relayPool(env: Bindings, id: string): Promise<Response> {
+export async function relayPool(env: Bindings, request: Request, id: string): Promise<Response> {
   const pool = await getPoolSummary(env, id);
   if (!pool) return text('节点池不存在', 404);
-  const nodes = await listPoolNodes(env, id);
-  return proxiesResponse(nodes, {
-    'Content-Type': 'text/yaml; charset=utf-8',
-    'Cache-Control': 'private, no-store',
-    'Profile-Update-Interval': '10800',
-  });
-}
+  if (!(await hasAvailablePoolNodes(env, id))) return text('节点池没有可用节点', 503);
 
-function proxiesResponse(nodes: ProxyNode[], headers: Record<string, string>): Response {
-  return new Response(stringify({ proxies: nodes }, { lineWidth: 0 }), {
-    status: 200,
-    headers,
+  const nodes = await listPoolNodes(env, id);
+  const userinfo = aggregateUserinfo(await listPoolUserinfo(env, id));
+  return providerResponse(request, stringifyProxies(nodes), {
+    userinfo: userinfo || null,
   });
 }
 

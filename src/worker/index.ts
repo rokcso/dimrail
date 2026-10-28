@@ -49,16 +49,18 @@ import {
   regenerateToken,
   resetBase,
   saveBase,
-  tokenExists,
   updateConfig,
 } from './config-store';
 import type { Bindings } from './env';
+import { fnv1a } from './hash';
+import { injectProviderNames, injectProviders } from './inject';
 import {
   countPools,
   createPool,
   deletePool,
   getPool,
   getPoolSummary,
+  hasAvailablePoolNodes,
   listPools,
   nameTaken as poolNameTaken,
   renamePool,
@@ -77,7 +79,7 @@ import { fetchSubscription } from './subscription';
 import { validateConfig } from './validate';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8' };
-const CONFIG_ID = /^\/api\/configs\/([A-Za-z0-9_-]{1,32})(\/token)?$/;
+const CONFIG_ID = /^\/api\/configs\/([A-Za-z0-9_-]{1,32})(\/token|\/preview)?$/;
 const AIRPORT_ID = /^\/api\/airports\/([A-Za-z0-9_-]{1,32})(\/refresh)?$/;
 const POOL_ID = /^\/api\/pools\/([A-Za-z0-9_-]{1,32})(\/nodes)?$/;
 
@@ -92,9 +94,9 @@ export default {
       case 'config':
         return serveConfig(request, env, url, route.id);
       case 'provider':
-        return handleProvider(env, url, route.id);
+        return handleProvider(request, env, url, route.configId, route.id);
       case 'pool':
-        return handlePool(env, url, route.id);
+        return handlePool(request, env, url, route.configId, route.id);
       case 'root':
         return redirect('/admin/configs');
       case 'notFound':
@@ -102,6 +104,13 @@ export default {
       default:
         return serveAssets(request, env);
     }
+  },
+  async scheduled(
+    _event: ScheduledController,
+    env: Bindings,
+    ctx: ExecutionContext,
+  ): Promise<void> {
+    ctx.waitUntil(refreshAllAirports(env));
   },
 } satisfies ExportedHandler<Bindings>;
 
@@ -117,79 +126,128 @@ async function serveConfig(
   if (!token) return text('缺少订阅密钥：链接需要带 ?token=', 401);
 
   let record: ConfigRecord | null;
-  let sources: ProviderSource[];
-  let sourceLabel: string;
   try {
     record = await getConfig(env, id);
     if (!record) return text('配置不存在', 404);
-    if (!timingSafeEqual(token, record.token)) return text('订阅链接无效', 401);
+    if (!(await timingSafeEqual(token, record.token))) return text('订阅链接无效', 401);
+  } catch (err) {
+    return text(`读取配置失败：${errorMessage(err)}`, 500);
+  }
 
-    // 节点来源二选一：指定的节点池，或全部启用机场。
+  const built = await buildSubscription(env, record, url.origin);
+  if (!built.ok) return text(built.message, built.status);
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'text/yaml; charset=utf-8',
+    'Cache-Control': 'private, no-store',
+    ETag: `W/"${fnv1a(built.body)}"`,
+    'Profile-Update-Interval': '10800',
+    'Content-Disposition': `attachment; filename="${record.id}.yaml"`,
+  };
+
+  const userinfo = await aggregatedUserinfo(env, record.poolId);
+  if (userinfo) headers['Subscription-Userinfo'] = userinfo;
+
+  if (request.headers.get('if-none-match') === headers.ETag) {
+    return new Response(null, { status: 304, headers });
+  }
+  return new Response(built.body, { status: 200, headers });
+}
+
+type SubscriptionBuild =
+  | { ok: true; body: string }
+  | { ok: false; status: number; message: string };
+
+/** 订阅正文与预览共用：解析来源、注入 provider、拼上头部注释。 */
+async function buildSubscription(
+  env: Bindings,
+  record: ConfigRecord,
+  origin: string,
+): Promise<SubscriptionBuild> {
+  let sources: ProviderSource[];
+  let sourceLabel: string;
+
+  try {
     if (record.poolId) {
       const pool = await getPoolSummary(env, record.poolId);
       if (!pool) {
-        return text('这份配置使用的节点池已不存在：到 /admin/pools 重新选择节点来源', 503);
+        return {
+          ok: false,
+          status: 503,
+          message: '这份配置使用的节点池已不存在：到 /admin/pools 重新选择节点来源',
+        };
+      }
+      if (!(await hasAvailablePoolNodes(env, record.poolId))) {
+        return { ok: false, status: 503, message: '节点池没有可用节点（机场可能都已停用）' };
       }
       sources = [{ id: pool.id, name: pool.name, kind: 'pool' }];
       sourceLabel = `节点池: ${pool.name}`;
     } else {
       const refs = await listProviderRefs(env);
       if (refs.length === 0) {
-        return text('还没有可用的机场：先到 /admin/airports 添加订阅链接', 503);
+        return {
+          ok: false,
+          status: 503,
+          message: '还没有可用的机场：先到 /admin/airports 添加订阅链接',
+        };
       }
       sources = refs.map((ref) => ({ ...ref, kind: 'airport' as const }));
       sourceLabel = `机场: ${refs.map((ref) => ref.name).join(', ')}`;
     }
   } catch (err) {
-    return text(`读取配置失败：${errorMessage(err)}`, 500);
+    return { ok: false, status: 500, message: `读取配置失败：${errorMessage(err)}` };
   }
 
+  const providers = buildProvidersYaml(sources, origin, record.id, record.token);
+  const names = providerNames(sources);
+  const name = record.name.replace(/[\r\n]+/g, ' ');
   const body = [
     '# Dimrail',
-    `# 配置: ${record.name}`,
+    `# 配置: ${name}`,
     `# ${sourceLabel}`,
-    record.yaml
-      .replaceAll('  # __PROXY_PROVIDERS__', buildProvidersYaml(sources, url.origin, record.token))
-      .replaceAll('__PROVIDER_NAMES__', providerNames(sources)),
+    injectProviderNames(injectProviders(record.yaml, providers), names),
   ].join('\n');
 
-  const headers: Record<string, string> = {
-    'Content-Type': 'text/yaml; charset=utf-8',
-    'Cache-Control': 'private, no-store',
-    ETag: `W/"${fnv1a(body)}"`,
-    'Profile-Update-Interval': '10800',
-    'Content-Disposition': `attachment; filename="${record.id}.yaml"`,
-  };
-
-  const userinfo = await aggregatedUserinfo(env);
-  if (userinfo) headers['Subscription-Userinfo'] = userinfo;
-
-  const ifNoneMatch = request.headers.get('if-none-match');
-  if (ifNoneMatch && ifNoneMatch === headers.ETag) {
-    return new Response(null, { status: 304, headers });
-  }
-  return new Response(body, { status: 200, headers });
+  return { ok: true, body };
 }
 
-async function handleProvider(env: Bindings, url: URL, id: string): Promise<Response> {
-  const denied = await checkSubscriptionToken(env, url);
+async function handleProvider(
+  request: Request,
+  env: Bindings,
+  url: URL,
+  configId: string,
+  id: string,
+): Promise<Response> {
+  const denied = await checkSubscriptionToken(env, url, configId);
   if (denied) return denied;
-  return relayProvider(env, id);
+  return relayProvider(env, request, id);
 }
 
-async function handlePool(env: Bindings, url: URL, id: string): Promise<Response> {
-  const denied = await checkSubscriptionToken(env, url);
+async function handlePool(
+  request: Request,
+  env: Bindings,
+  url: URL,
+  configId: string,
+  id: string,
+): Promise<Response> {
+  const denied = await checkSubscriptionToken(env, url, configId);
   if (denied) return denied;
-  return relayPool(env, id);
+  return relayPool(env, request, id);
 }
 
-/** /providers 共用：token 属于任意一份配置即可读。 */
-async function checkSubscriptionToken(env: Bindings, url: URL): Promise<Response | null> {
+/** provider URL 绑定配置 id，token 只能读自己那份配置的来源。 */
+async function checkSubscriptionToken(
+  env: Bindings,
+  url: URL,
+  configId: string,
+): Promise<Response | null> {
   const token = url.searchParams.get('token') ?? '';
   if (!token) return text('缺少订阅密钥', 401);
 
   try {
-    if (await tokenExists(env, token)) return null;
+    const record = await getConfig(env, configId);
+    if (!record) return text('配置不存在', 404);
+    if (await timingSafeEqual(token, record.token)) return null;
   } catch (err) {
     return text(`校验失败：${errorMessage(err)}`, 500);
   }
@@ -199,7 +257,13 @@ async function checkSubscriptionToken(env: Bindings, url: URL): Promise<Response
 /* ---------------- 管理 API ---------------- */
 
 async function handleApi(request: Request, env: Bindings, path: string): Promise<Response> {
-  const admin = checkAdmin(request, env);
+  if (env.ADMIN_RATE_LIMIT) {
+    const ip = request.headers.get('cf-connecting-ip') ?? 'local';
+    const { success } = await env.ADMIN_RATE_LIMIT.limit({ key: `admin:${ip}` });
+    if (!success) return json({ error: '请求过于频繁，请稍后重试' }, 429);
+  }
+
+  const admin = await checkAdmin(request, env);
   if (!admin.ok) return json({ error: admin.message }, admin.status);
 
   try {
@@ -260,6 +324,14 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
 
       const result = validateConfig(payload.data.yaml);
       if (!result.ok) return json({ error: result.error }, 400);
+
+      const base = await loadBase(env);
+      if (
+        payload.data.expectedUpdatedAt !== undefined &&
+        base.updatedAt !== payload.data.expectedUpdatedAt
+      ) {
+        return json({ error: '基础配置已在别处修改，请刷新后重试' }, 409);
+      }
 
       const updatedAt = await saveBase(env, payload.data.yaml);
       return json({ updatedAt, notices: result.notices } satisfies SaveResponse);
@@ -332,7 +404,20 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
 
   if (path === '/api/nodes') {
     if (method !== 'GET') return methodNotAllowed();
-    const [rows, airports] = await Promise.all([listNodeViews(env), listAirports(env)]);
+    const url = new URL(request.url);
+    const airportId = url.searchParams.get('airportId') ?? undefined;
+    const keyword = url.searchParams.get('q')?.trim() || undefined;
+    const type = url.searchParams.get('type') || undefined;
+    const limitValue = Number(url.searchParams.get('limit') ?? '');
+    const offsetValue = Number(url.searchParams.get('offset') ?? '');
+    const limit =
+      Number.isFinite(limitValue) && limitValue > 0 ? Math.min(limitValue, 5000) : undefined;
+    const offset = Number.isFinite(offsetValue) && offsetValue > 0 ? offsetValue : 0;
+
+    const [rows, airports] = await Promise.all([
+      listNodeViews(env, { airportId, keyword, type, limit, offset }),
+      listAirports(env),
+    ]);
     const nodes: NodeView[] = rows.map((row) => ({
       name: row.name,
       type: row.type,
@@ -340,6 +425,7 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
       port: row.port,
       airportId: row.airportId,
       airportName: row.airportName,
+      airportEnabled: row.airportEnabled === 1,
     }));
 
     const enabled = airports.filter((airport) => airport.enabled);
@@ -351,8 +437,8 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
       nodes,
       fetchedAt: stamps.length ? Math.max(...stamps) : null,
       airports: {
-        total: enabled.length,
-        failed: enabled.filter((airport) => airport.error).length,
+        total: airports.length,
+        failed: airports.filter((airport) => airport.error).length,
       },
     } satisfies NodesResponse);
   }
@@ -395,10 +481,18 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
       if (method !== 'PUT') return methodNotAllowed();
       const payload = nodePoolMembersPayloadSchema.safeParse(await readJson(request));
       if (!payload.success) return json({ error: firstIssue(payload.error) }, 400);
-      if (!(await getPoolSummary(env, poolId))) return json({ error: '节点池不存在' }, 404);
+      const summary = await getPoolSummary(env, poolId);
+      if (!summary) return json({ error: '节点池不存在' }, 404);
+      if (
+        payload.data.expectedUpdatedAt !== undefined &&
+        summary.updatedAt !== payload.data.expectedUpdatedAt
+      ) {
+        return json({ error: '节点池已在别处修改，请刷新后重试' }, 409);
+      }
 
       const nodeCount = await setPoolMembers(env, poolId, payload.data.members);
-      return json({ ok: true, nodeCount });
+      const updated = await getPoolSummary(env, poolId);
+      return json({ ok: true, nodeCount, updatedAt: updated?.updatedAt ?? Date.now() });
     }
 
     if (method === 'GET') {
@@ -435,11 +529,20 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
   const id = match?.[1];
   if (!id) return json({ error: 'Not found' }, 404);
 
-  if (match?.[2]) {
+  if (match?.[2] === '/token') {
     if (method !== 'POST') return methodNotAllowed();
     const token = await regenerateToken(env, id);
     if (!token) return json({ error: '配置不存在' }, 404);
     return json({ token } satisfies TokenResponse);
+  }
+
+  if (match?.[2] === '/preview') {
+    if (method !== 'GET') return methodNotAllowed();
+    const record = await getConfig(env, id);
+    if (!record) return json({ error: '配置不存在' }, 404);
+    const built = await buildSubscription(env, record, new URL(request.url).origin);
+    if (!built.ok) return json({ error: built.message }, built.status);
+    return json({ yaml: built.body });
   }
 
   if (method === 'GET') {
@@ -461,6 +564,14 @@ async function routeApi(request: Request, env: Bindings, path: string): Promise<
     if (payload.data.poolId && !(await getPoolSummary(env, payload.data.poolId))) {
       return json({ error: '节点池不存在' }, 400);
     }
+    const current = await getConfig(env, id);
+    if (!current) return json({ error: '配置不存在' }, 404);
+    if (
+      payload.data.expectedUpdatedAt !== undefined &&
+      current.updatedAt !== payload.data.expectedUpdatedAt
+    ) {
+      return json({ error: '配置已在别处修改，请刷新后重试' }, 409);
+    }
 
     const updated = await updateConfig(env, id, payload.data);
     if (!updated) return json({ error: '配置不存在' }, 404);
@@ -480,11 +591,12 @@ async function refreshAirport(env: Bindings, airport: AirportSummary): Promise<A
   const result = await fetchSubscription(airport.url);
 
   if (result.ok) {
-    await saveNodes(env, airport.id, result.nodes, result.userinfo);
+    await saveNodes(env, airport.id, result.nodes, result.userinfo, result.truncated);
     return {
       ...airport,
       nodeCount: result.nodes.length,
       userinfo: result.userinfo ?? airport.userinfo,
+      truncated: result.truncated,
       fetchedAt: Date.now(),
       error: null,
       errorAt: null,
@@ -494,6 +606,19 @@ async function refreshAirport(env: Bindings, airport: AirportSummary): Promise<A
 
   await markError(env, airport.id, result.error);
   return { ...airport, error: result.error, errorAt: Date.now() };
+}
+
+/** Cron：顺序刷新启用机场，避免一次打太多上游。 */
+async function refreshAllAirports(env: Bindings): Promise<void> {
+  const airports = await listAirports(env);
+  for (const airport of airports) {
+    if (!airport.enabled) continue;
+    try {
+      await refreshAirport(env, airport);
+    } catch (err) {
+      console.error(`scheduled refresh ${airport.id}`, err);
+    }
+  }
 }
 
 /* ---------------- 静态资源 ---------------- */
@@ -508,6 +633,14 @@ async function serveAssets(request: Request, env: Bindings): Promise<Response> {
       request.url.includes('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache',
     );
   }
+  headers.set('X-Content-Type-Options', 'nosniff');
+  headers.set('X-Frame-Options', 'DENY');
+  headers.set('Referrer-Policy', 'no-referrer');
+  headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  headers.set(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' http://127.0.0.1:* http://localhost:*; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+  );
   if (new URL(request.url).pathname.startsWith('/admin')) {
     headers.set('X-Robots-Tag', 'noindex, nofollow');
   }
@@ -546,13 +679,4 @@ function firstIssue(error: { issues: { message: string }[] }): string {
 
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
-}
-
-function fnv1a(input: string): string {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < input.length; i += 1) {
-    hash ^= input.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0).toString(16);
 }

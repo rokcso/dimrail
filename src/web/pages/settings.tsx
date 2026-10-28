@@ -1,5 +1,6 @@
 import { RiDashboardLine, RiFileCodeLine } from '@remixicon/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useBlocker } from '@tanstack/react-router';
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import type { BaseConfigResponse, OverviewResponse, SaveResponse } from '@/shared/schema';
 import { AppShell } from '../components/app-shell';
@@ -69,18 +70,24 @@ export function SettingsPage({ token, path, onNavigate, onReject }: PageProps) {
 
   const dirty = Boolean(loaded) && yaml !== savedYaml;
 
+  const blocker = useBlocker({
+    shouldBlockFn: () => dirty,
+    withResolver: true,
+    enableBeforeUnload: dirty,
+  });
+
   useEffect(() => {
-    if (!dirty) return;
-    const handler = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = '';
-    };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [dirty]);
+    if (blocker.status !== 'blocked') return;
+    if (window.confirm('基础配置有未保存的修改，离开会丢失。继续？')) blocker.proceed();
+    else blocker.reset();
+  }, [blocker]);
 
   const save = useMutation({
-    mutationFn: () => api.put<SaveResponse>('/api/base-config', token, { yaml }),
+    mutationFn: () =>
+      api.put<SaveResponse>('/api/base-config', token, {
+        yaml,
+        expectedUpdatedAt: loaded?.updatedAt ?? null,
+      }),
     onSuccess: (response) => {
       setSavedYaml(yaml);
       setNotices(response.notices);

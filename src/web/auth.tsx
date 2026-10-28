@@ -1,44 +1,28 @@
-import { useMutation } from '@tanstack/react-query';
-import { useCallback, useEffect, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { createContext, type ReactNode, useCallback, useContext, useState } from 'react';
 import type { ConfigListResponse } from '@/shared/schema';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
 import { ApiError, api } from './lib/api';
-import { AirportsPage } from './pages/airports';
-import { ConfigsPage } from './pages/configs';
-import { PoolsPage } from './pages/pools';
-import { SettingsPage } from './pages/settings';
-import { normalizePath, parseAdminPath } from './routes';
 
 const TOKEN_KEY = 'dimrail-admin-token';
 
-export function App() {
+interface AuthValue {
+  token: string;
+  reject: () => void;
+}
+
+const AuthContext = createContext<AuthValue | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) ?? '');
-  const [path, setPath] = useState(() => normalizePath(location.pathname));
-
-  useEffect(() => {
-    if (location.pathname !== path) history.replaceState(null, '', path);
-    const onPop = () => setPath(normalizePath(location.pathname));
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
-  }, [path]);
-
-  const navigate = useCallback((next: string) => {
-    const target = normalizePath(next);
-    history.pushState(null, '', target);
-    setPath(target);
-  }, []);
-
-  const replace = useCallback((next: string) => {
-    const target = normalizePath(next);
-    history.replaceState(null, '', target);
-    setPath(target);
-  }, []);
 
   const reject = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
+    queryClient.clear();
     setToken('');
-  }, []);
+  }, [queryClient]);
 
   if (!token) {
     return (
@@ -51,20 +35,13 @@ export function App() {
     );
   }
 
-  const route = parseAdminPath(path);
-  const props = {
-    token,
-    path,
-    selectedId: route.name === 'settings' ? null : route.id,
-    onNavigate: navigate,
-    onReplace: replace,
-    onReject: reject,
-  };
+  return <AuthContext.Provider value={{ token, reject }}>{children}</AuthContext.Provider>;
+}
 
-  if (route.name === 'settings') return <SettingsPage {...props} />;
-  if (route.name === 'airports') return <AirportsPage {...props} />;
-  if (route.name === 'pools') return <PoolsPage {...props} />;
-  return <ConfigsPage {...props} />;
+export function useAuth(): AuthValue {
+  const value = useContext(AuthContext);
+  if (!value) throw new Error('AuthProvider 未挂载');
+  return value;
 }
 
 function Gate({ onAccept }: { onAccept: (token: string) => void }) {

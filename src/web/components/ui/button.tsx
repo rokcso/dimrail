@@ -15,6 +15,7 @@ const buttonVariants = cva(
       size: {
         default: 'h-7 px-2.5',
         sm: 'h-6 px-2',
+        icon: 'size-7 p-0',
       },
     },
     defaultVariants: { variant: 'outline', size: 'default' },

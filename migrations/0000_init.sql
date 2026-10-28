@@ -13,7 +13,7 @@ CREATE TABLE `configs` (
   `yaml` text NOT NULL,
   `token` text NOT NULL UNIQUE,
   -- NULL = 全部启用机场；否则只使用这个节点池
-  `pool_id` text,
+  `pool_id` text REFERENCES `node_pools`(`id`),
   `created_at` integer NOT NULL,
   `updated_at` integer NOT NULL
 );
@@ -29,13 +29,17 @@ CREATE TABLE `airports` (
   `fetched_at` integer,
   `error` text,
   `error_at` integer,
+  -- 拉取时是否超过单机场节点上限被截断
+  `truncated` integer NOT NULL DEFAULT 0,
+  -- 回源锁：避免多个客户端同时刷新同一个机场
+  `refresh_lock` integer,
   `created_at` integer NOT NULL,
   `updated_at` integer NOT NULL
 );
 
 -- 节点一行一条：真实机场几百个节点，整份 proxies 塞进一个字段会超出 D1 单值上限。
 CREATE TABLE `airport_nodes` (
-  `airport_id` text NOT NULL,
+  `airport_id` text NOT NULL REFERENCES `airports`(`id`) ON DELETE CASCADE,
   `idx` integer NOT NULL,
   `name` text NOT NULL DEFAULT '',
   `type` text NOT NULL DEFAULT '',
@@ -55,9 +59,14 @@ CREATE TABLE `node_pools` (
 
 -- 成员按（机场 + 节点名 + 类型）引用，不复制节点内容。
 CREATE TABLE `node_pool_nodes` (
-  `pool_id` text NOT NULL,
-  `airport_id` text NOT NULL,
+  `pool_id` text NOT NULL REFERENCES `node_pools`(`id`) ON DELETE CASCADE,
+  `airport_id` text NOT NULL REFERENCES `airports`(`id`) ON DELETE CASCADE,
   `node_name` text NOT NULL,
   `node_type` text NOT NULL,
   PRIMARY KEY (`pool_id`, `airport_id`, `node_name`, `node_type`)
 );
+
+CREATE INDEX `idx_configs_pool` ON `configs` (`pool_id`);
+CREATE INDEX `idx_airports_enabled_position` ON `airports` (`enabled`, `position`);
+CREATE INDEX `idx_airport_nodes_lookup` ON `airport_nodes` (`airport_id`, `name`, `type`);
+CREATE INDEX `idx_pool_nodes_airport` ON `node_pool_nodes` (`airport_id`);

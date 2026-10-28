@@ -1,11 +1,15 @@
 import {
   RiAddLine,
   RiCheckLine,
+  RiCloseLine,
   RiDeleteBinLine,
+  RiEyeLine,
   RiFileCopyLine,
+  RiMore2Line,
   RiRefreshLine,
 } from '@remixicon/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useBlocker } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   ConfigDetail,
@@ -20,6 +24,20 @@ import { LazyYamlEditor } from '../components/lazy-editor';
 import { PageHeader } from '../components/page-header';
 import { Status, type Tone } from '../components/status';
 import { Button } from '../components/ui/button';
+import {
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogRoot,
+  DialogTitle,
+} from '../components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../components/ui/dropdown-menu';
 import { ApiError, api } from '../lib/api';
 import { cn, formatBytes, formatStamp, formatTime } from '../lib/utils';
 import type { PageProps } from './types';
@@ -51,6 +69,9 @@ export function ConfigsPage({
   const [notices, setNotices] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewYaml, setPreviewYaml] = useState('');
+  const [previewError, setPreviewError] = useState('');
   const copyTimer = useRef<number | null>(null);
   /** 已经同步进编辑器的配置 id：换节点来源会更新缓存，不该覆盖未保存的 YAML。 */
   const syncedConfigId = useRef<string | null>(null);
@@ -116,25 +137,34 @@ export function ConfigsPage({
 
   const dirty = Boolean(loaded) && (yaml !== savedYaml || name.trim() !== savedName);
 
+  const blocker = useBlocker({
+    shouldBlockFn: () => dirty,
+    withResolver: true,
+    enableBeforeUnload: dirty,
+  });
+
   useEffect(() => {
-    if (!dirty) return;
-    const handler = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = '';
-    };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [dirty]);
+    if (blocker.status !== 'blocked') return;
+    if (window.confirm('当前配置有未保存的修改，离开会丢失。继续？')) blocker.proceed();
+    else blocker.reset();
+  }, [blocker]);
 
   const save = useMutation({
     mutationFn: () =>
-      api.put<SaveResponse>(`/api/configs/${activeId}`, token, { yaml, name: name.trim() }),
+      api.put<SaveResponse>(`/api/configs/${activeId}`, token, {
+        yaml,
+        name: name.trim(),
+        expectedUpdatedAt: loaded?.updatedAt ?? null,
+      }),
     onSuccess: (response) => {
       setSavedYaml(yaml);
       setSavedName(name.trim());
       setName(name.trim());
       setNotices(response.notices);
       setError('');
+      queryClient.setQueryData<ConfigDetail>(['config', activeId], (prev) =>
+        prev ? { ...prev, yaml, name: name.trim(), updatedAt: response.updatedAt } : prev,
+      );
       void queryClient.invalidateQueries({ queryKey: ['configs'] });
       void queryClient.invalidateQueries({ queryKey: ['overview'] });
     },
@@ -188,11 +218,14 @@ export function ConfigsPage({
 
   const changeScope = useMutation({
     mutationFn: (poolId: string | null) =>
-      api.put<SaveResponse>(`/api/configs/${activeId}`, token, { poolId }),
-    onSuccess: (_response, poolId) => {
+      api.put<SaveResponse>(`/api/configs/${activeId}`, token, {
+        poolId,
+        expectedUpdatedAt: loaded?.updatedAt ?? null,
+      }),
+    onSuccess: (response, poolId) => {
       setScope(poolId ?? '');
       queryClient.setQueryData<ConfigDetail>(['config', activeId], (prev) =>
-        prev ? { ...prev, poolId } : prev,
+        prev ? { ...prev, poolId, updatedAt: response.updatedAt } : prev,
       );
       setError('');
       void queryClient.invalidateQueries({ queryKey: ['configs'] });
@@ -203,9 +236,22 @@ export function ConfigsPage({
     },
   });
 
+  const preview = useMutation({
+    mutationFn: () => api.get<{ yaml: string }>(`/api/configs/${activeId}/preview`, token),
+    onSuccess: (data) => {
+      setPreviewYaml(data.yaml);
+      setPreviewError('');
+      setPreviewOpen(true);
+    },
+    onError: (err: Error) => {
+      setPreviewError(err.message);
+      setPreviewOpen(true);
+      if (err instanceof ApiError && err.status === 401) onReject();
+    },
+  });
+
   const select = (id: string) => {
     if (id === activeId) return;
-    if (dirty && !window.confirm('当前配置有未保存的修改，切换后会丢失。继续？')) return;
     onNavigate(`/admin/configs/${id}`);
   };
 
@@ -347,7 +393,7 @@ export function ConfigsPage({
                 aria-label="节点来源"
                 value={scope}
                 onChange={(event) => changeScope.mutate(event.target.value || null)}
-                disabled={changeScope.isPending}
+                disabled={changeScope.isPending || !loaded}
                 className="h-7 max-w-44 rounded-control border-[0.5px] border-input bg-background px-2 text-[12px] text-foreground outline-none disabled:opacity-50"
               >
                 <option value="">全部节点</option>
@@ -369,14 +415,6 @@ export function ConfigsPage({
                 {copied ? '已复制' : '订阅链接'}
               </Button>
               <Button
-                variant="ghost"
-                onClick={confirmRegenerate}
-                disabled={regenerate.isPending}
-                title="重新生成订阅链接，旧链接立即失效"
-              >
-                <RiRefreshLine className="size-3.5" />
-              </Button>
-              <Button
                 variant="primary"
                 onClick={() => save.mutate()}
                 disabled={!canSave}
@@ -384,6 +422,40 @@ export function ConfigsPage({
               >
                 保存
               </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label="更多操作"
+                      title="更多操作"
+                    >
+                      <RiMore2Line className="size-4" />
+                    </Button>
+                  }
+                />
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => preview.mutate()} disabled={preview.isPending}>
+                    <RiEyeLine className="size-3.5" />
+                    预览订阅
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={confirmRegenerate} disabled={regenerate.isPending}>
+                    <RiRefreshLine className="size-3.5" />
+                    重新生成订阅链接
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="my-1 h-[0.5px] bg-border" />
+                  <DropdownMenuItem
+                    danger
+                    onClick={() => confirmDelete(active)}
+                    disabled={remove.isPending}
+                  >
+                    <RiDeleteBinLine className="size-3.5" />
+                    删除配置
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </>
           }
         />
@@ -430,6 +502,45 @@ export function ConfigsPage({
           )}
         </div>
       )}
+
+      <DialogRoot
+        open={previewOpen}
+        onOpenChange={(open) => {
+          setPreviewOpen(open);
+          if (!open) setPreviewError('');
+        }}
+      >
+        <DialogContent className="max-w-3xl">
+          <div className="flex items-start justify-between gap-4">
+            <DialogTitle>订阅预览</DialogTitle>
+            <DialogClose
+              render={
+                <Button type="button" variant="ghost" size="icon" aria-label="关闭">
+                  <RiCloseLine className="size-4" />
+                </Button>
+              }
+            />
+          </div>
+
+          {previewError ? (
+            <p className="mt-4 text-[12px] text-danger">{previewError}</p>
+          ) : (
+            <pre className="mt-4 max-h-[60vh] overflow-auto rounded-control border-[0.5px] border-border bg-surface p-3 font-mono text-[12px] leading-relaxed break-all whitespace-pre-wrap">
+              {previewYaml}
+            </pre>
+          )}
+
+          <DialogFooter className="mt-4">
+            <DialogClose
+              render={
+                <Button type="button" variant="outline">
+                  关闭
+                </Button>
+              }
+            />
+          </DialogFooter>
+        </DialogContent>
+      </DialogRoot>
     </AppShell>
   );
 }

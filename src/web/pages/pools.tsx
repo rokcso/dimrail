@@ -1,5 +1,12 @@
-import { RiAddLine, RiDeleteBinLine, RiSearchLine } from '@remixicon/react';
+import {
+  RiAddLine,
+  RiCloseLine,
+  RiDeleteBinLine,
+  RiMagicLine,
+  RiSearchLine,
+} from '@remixicon/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useBlocker } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   NodePoolDetail,
@@ -13,7 +20,15 @@ import { AppShell } from '../components/app-shell';
 import { PageHeader } from '../components/page-header';
 import { Status, type Tone } from '../components/status';
 import { Button } from '../components/ui/button';
+import {
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogRoot,
+  DialogTitle,
+} from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import { ApiError, api } from '../lib/api';
 import { cn } from '../lib/utils';
 import type { PageProps } from './types';
@@ -36,6 +51,36 @@ function sameSet(a: Set<string>, b: Set<string>): boolean {
   return true;
 }
 
+function HeaderCheckbox({
+  checked,
+  indeterminate,
+  disabled,
+  onChange,
+}: {
+  checked: boolean;
+  indeterminate: boolean;
+  disabled: boolean;
+  onChange: () => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = indeterminate;
+  }, [indeterminate]);
+
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      checked={checked}
+      disabled={disabled}
+      onChange={onChange}
+      aria-label="全选当前节点"
+      className="size-3.5 accent-primary disabled:opacity-40"
+    />
+  );
+}
+
 export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onReject }: PageProps) {
   const queryClient = useQueryClient();
   const [nameDraft, setNameDraft] = useState('');
@@ -43,9 +88,16 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
   const [savedKeys, setSavedKeys] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
-  const [airportFilter, setAirportFilter] = useState('all');
-  const [adding, setAdding] = useState(false);
+  const [airportFilter, setAirportFilter] = useState('');
+  const [renderLimit, setRenderLimit] = useState(200);
+  const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState('');
+  const [createError, setCreateError] = useState('');
+  const [ruleOpen, setRuleOpen] = useState(false);
+  const [ruleAirport, setRuleAirport] = useState('');
+  const [ruleType, setRuleType] = useState('all');
+  const [ruleKeyword, setRuleKeyword] = useState('');
+  const [ruleError, setRuleError] = useState('');
   const [error, setError] = useState('');
   /** 已经灌进本地选择的节点池 id：保存/改名只更新缓存，不重置正在编辑的选择。 */
   const syncedPoolId = useRef<string | null>(null);
@@ -102,15 +154,17 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
 
   const dirty = Boolean(loaded) && !sameSet(selectedKeys, savedKeys);
 
+  const blocker = useBlocker({
+    shouldBlockFn: () => dirty,
+    withResolver: true,
+    enableBeforeUnload: dirty,
+  });
+
   useEffect(() => {
-    if (!dirty) return;
-    const handler = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = '';
-    };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [dirty]);
+    if (blocker.status !== 'blocked') return;
+    if (window.confirm('当前节点池的选择还没保存，离开会丢失。继续？')) blocker.proceed();
+    else blocker.reset();
+  }, [blocker]);
 
   const refreshPools = async () => {
     await Promise.all([
@@ -124,16 +178,26 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
     if (err instanceof ApiError && err.status === 401) onReject();
   };
 
+  const openCreate = () => {
+    setNewName('');
+    setCreateError('');
+    setCreateOpen(true);
+  };
+
   const create = useMutation({
     mutationFn: () => api.post<NodePoolSummary>('/api/pools', token, { name: newName }),
     onSuccess: async (pool) => {
-      setAdding(false);
+      setCreateOpen(false);
       setNewName('');
+      setCreateError('');
       setError('');
       await refreshPools();
       onNavigate(`/admin/pools/${pool.id}`);
     },
-    onError: onMutationError,
+    onError: (err: Error) => {
+      setCreateError(err.message);
+      if (err instanceof ApiError && err.status === 401) onReject();
+    },
   });
 
   const rename = useMutation({
@@ -164,20 +228,34 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
   });
 
   const saveMembers = useMutation({
-    mutationFn: (members: NodePoolMember[]) =>
-      api.put<{ ok: boolean; nodeCount: number }>(`/api/pools/${selectedId}/nodes`, token, {
-        members,
-      }),
-    onSuccess: async (_data, members) => {
-      setSavedKeys(new Set(members.map(nodeKey)));
+    mutationFn: (input: { members: NodePoolMember[]; expectedUpdatedAt: number | null }) =>
+      api.put<{ ok: boolean; nodeCount: number; updatedAt: number }>(
+        `/api/pools/${selectedId}/nodes`,
+        token,
+        input,
+      ),
+    onSuccess: async (data, input) => {
+      setSavedKeys(new Set(input.members.map(nodeKey)));
       queryClient.setQueryData<NodePoolDetail>(['pool', selectedId], (prev) =>
-        prev ? { ...prev, members, nodeCount: members.length, updatedAt: Date.now() } : prev,
+        prev
+          ? {
+              ...prev,
+              members: input.members,
+              nodeCount: input.members.length,
+              updatedAt: data.updatedAt,
+            }
+          : prev,
       );
       setError('');
       await refreshPools();
     },
     onError: onMutationError,
   });
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 筛选变化时重置显示数量
+  useEffect(() => {
+    setRenderLimit(200);
+  }, [search, airportFilter, typeFilter, selectedId]);
 
   const nodeKeys = useMemo(() => new Set(nodes.map(nodeKey)), [nodes]);
 
@@ -189,6 +267,12 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
     return [...map.entries()].map(([id, name]) => ({ id, name }));
   }, [nodes]);
 
+  useEffect(() => {
+    if (airports.length === 0) return;
+    if (airports.some((airport) => airport.id === airportFilter)) return;
+    setAirportFilter(airports[0]?.id ?? '');
+  }, [airports, airportFilter]);
+
   const types = useMemo(() => {
     const set = new Set(nodes.map((node) => node.type).filter(Boolean));
     return [...set].sort();
@@ -197,7 +281,7 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
   const rows = useMemo(() => {
     const keyword = search.trim().toLowerCase();
     return nodes.filter((node) => {
-      if (airportFilter !== 'all' && node.airportId !== airportFilter) return false;
+      if (airportFilter && node.airportId !== airportFilter) return false;
       if (typeFilter !== 'all' && node.type !== typeFilter) return false;
       if (!keyword) return true;
       return (
@@ -208,7 +292,6 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
 
   const selectPool = (id: string) => {
     if (id === selectedId) return;
-    if (dirty && !window.confirm('当前节点池的选择还没保存，切换后会丢失。继续？')) return;
     onNavigate(`/admin/pools/${id}`);
   };
 
@@ -223,20 +306,21 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
     if (error) setError('');
   };
 
-  const selectVisible = () => {
-    setSelectedKeys((prev) => {
-      const next = new Set(prev);
-      for (const node of rows) next.add(nodeKey(node));
-      return next;
-    });
-  };
+  const visibleSelected = rows.filter((node) => selectedKeys.has(nodeKey(node))).length;
+  const allVisibleSelected = rows.length > 0 && visibleSelected === rows.length;
+  const someVisibleSelected = visibleSelected > 0 && !allVisibleSelected;
 
-  const clearVisible = () => {
+  const toggleVisible = () => {
     setSelectedKeys((prev) => {
       const next = new Set(prev);
-      for (const node of rows) next.delete(nodeKey(node));
+      for (const node of rows) {
+        const key = nodeKey(node);
+        if (allVisibleSelected) next.delete(key);
+        else next.add(key);
+      }
       return next;
     });
+    if (error) setError('');
   };
 
   const submitSave = () => {
@@ -247,11 +331,44 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
       const [airportId, name, type] = JSON.parse(key) as [string, string, string];
       return { airportId, name, type };
     });
-    saveMembers.mutate(members);
+    saveMembers.mutate({ members, expectedUpdatedAt: loaded?.updatedAt ?? null });
   };
 
   const dropStale = () => {
     setSelectedKeys((prev) => new Set([...prev].filter((key) => nodeKeys.has(key))));
+  };
+
+  const openRule = () => {
+    setRuleAirport('');
+    setRuleType('all');
+    setRuleKeyword('');
+    setRuleError('');
+    setRuleOpen(true);
+  };
+
+  const applyRule = (mode: 'replace' | 'append') => {
+    const keyword = ruleKeyword.trim().toLowerCase();
+    const matches = nodes.filter((node) => {
+      if (ruleAirport && node.airportId !== ruleAirport) return false;
+      if (ruleType !== 'all' && node.type !== ruleType) return false;
+      if (!keyword) return true;
+      return (
+        node.name.toLowerCase().includes(keyword) || node.server.toLowerCase().includes(keyword)
+      );
+    });
+
+    if (matches.length === 0) {
+      setRuleError('没有匹配的节点');
+      return;
+    }
+
+    setSelectedKeys((prev) => {
+      const next = mode === 'replace' ? new Set<string>() : new Set(prev);
+      for (const node of matches) next.add(nodeKey(node));
+      return next;
+    });
+    setRuleOpen(false);
+    setError('');
   };
 
   const commitRename = () => {
@@ -284,10 +401,7 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
         <button
           type="button"
           title="新建节点池"
-          onClick={() => {
-            setAdding(true);
-            setError('');
-          }}
+          onClick={openCreate}
           className="flex size-5 items-center justify-center rounded-control text-muted-foreground outline-none hover:bg-muted hover:text-foreground"
         >
           <RiAddLine className="size-3.5" />
@@ -364,7 +478,7 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
             <>
               <Status tone={tone} label={TONE_LABEL[tone]} />
               <span className="tabular-nums">{selectedKeys.size} 个已选</span>
-              <span className="tabular-nums">{nodes.length} 个可用</span>
+              <span className="tabular-nums">{nodes.length} 个节点</span>
               {staleCount > 0 && (
                 <>
                   <span className="text-warning">{staleCount} 个已选节点不可用</span>
@@ -380,61 +494,32 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
             </>
           }
           actions={
-            <Button
-              variant="primary"
-              onClick={submitSave}
-              disabled={!dirty || saveMembers.isPending}
-            >
-              {saveMembers.isPending ? '保存中' : '保存选择'}
-            </Button>
+            <>
+              <Button variant="outline" onClick={openRule}>
+                <RiMagicLine className="size-3.5" />
+                按规则选择
+              </Button>
+              <Button
+                variant="primary"
+                onClick={submitSave}
+                disabled={!dirty || saveMembers.isPending}
+              >
+                {saveMembers.isPending ? '保存中' : '保存选择'}
+              </Button>
+            </>
           }
         />
       ) : (
         <PageHeader
           title="节点池"
-          meta={<span className="tabular-nums">{nodes.length} 个可用节点</span>}
+          meta={<span className="tabular-nums">{nodes.length} 个节点</span>}
           actions={
-            <Button variant="primary" onClick={() => setAdding(true)}>
+            <Button variant="primary" onClick={openCreate}>
               <RiAddLine className="size-3.5" />
               新建节点池
             </Button>
           }
         />
-      )}
-
-      {adding && (
-        <form
-          className="flex shrink-0 items-center gap-2 border-b-[0.5px] border-border px-6 py-2"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!newName.trim() || create.isPending) return;
-            setError('');
-            create.mutate();
-          }}
-        >
-          <Input
-            value={newName}
-            onChange={(event) => setNewName(event.target.value)}
-            placeholder="节点池名称"
-            aria-label="节点池名称"
-            className="w-64"
-            autoFocus
-          />
-          <Button type="submit" variant="primary" disabled={create.isPending || !newName.trim()}>
-            {create.isPending ? '创建中' : '创建'}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => {
-              setAdding(false);
-              setNewName('');
-              setError('');
-            }}
-          >
-            取消
-          </Button>
-        </form>
       )}
 
       {error && (
@@ -460,7 +545,6 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
               aria-label="机场"
               className="h-6 max-w-32 rounded-control bg-transparent px-1 text-[12px] text-muted-foreground outline-none hover:text-foreground"
             >
-              <option value="all">全部机场</option>
               {airports.map((airport) => (
                 <option key={airport.id} value={airport.id}>
                   {airport.name}
@@ -483,83 +567,90 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
             <span className="shrink-0 text-[12px] tabular-nums text-muted-foreground">
               {rows.length} / {nodes.length}
             </span>
-            <span className="mx-1 h-3 w-[0.5px] bg-border" aria-hidden />
-            <button
-              type="button"
-              onClick={selectVisible}
-              className="text-[12px] text-muted-foreground outline-none hover:text-foreground"
-            >
-              全选结果
-            </button>
-            <button
-              type="button"
-              onClick={clearVisible}
-              className="text-[12px] text-muted-foreground outline-none hover:text-foreground"
-            >
-              清空结果
-            </button>
           </div>
 
           <div className="min-h-0 flex-1 overflow-auto">
             {rows.length > 0 ? (
-              <table className="w-full border-collapse text-[12px]">
-                <thead className="sticky top-0 z-10 bg-background">
-                  <tr className="border-b-[0.5px] border-border text-left text-[12px] text-muted-foreground">
-                    <th className="w-9 py-1.5 pl-6">
-                      <span className="sr-only">选择</span>
-                    </th>
-                    <th className="px-2 py-1.5 font-normal">名称</th>
-                    <th className="w-20 px-3 py-1.5 font-normal">类型</th>
-                    <th className="px-3 py-1.5 font-normal">服务器</th>
-                    <th className="w-16 px-3 py-1.5 text-right font-normal">端口</th>
-                    <th className="w-32 py-1.5 pr-6 pl-3 font-normal">来源</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((node) => {
-                    const key = nodeKey(node);
-                    const checked = selectedKeys.has(key);
-                    return (
-                      <tr
-                        key={`${key}`}
-                        onClick={() => toggle(node)}
-                        className={cn(
-                          'cursor-pointer border-b-[0.5px] border-border/60',
-                          checked ? 'bg-accent/60 hover:bg-accent' : 'hover:bg-surface',
-                        )}
-                      >
-                        <td className="py-1 pl-6">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onClick={(event) => event.stopPropagation()}
-                            onChange={() => toggle(node)}
-                            aria-label={`选择 ${node.name}`}
-                            className="size-3.5 accent-primary"
-                          />
-                        </td>
-                        <td className="max-w-0 truncate px-2 py-1 text-foreground">{node.name}</td>
-                        <td className="px-3 py-1 text-muted-foreground">{node.type || '—'}</td>
-                        <td className="max-w-0 truncate px-3 py-1 font-mono text-[12px] text-muted-foreground">
-                          {node.server}
-                        </td>
-                        <td className="px-3 py-1 text-right tabular-nums text-muted-foreground">
-                          {node.port}
-                        </td>
-                        <td className="max-w-0 truncate py-1 pr-6 pl-3 text-muted-foreground">
-                          {node.airportName}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <>
+                <table className="w-full border-collapse text-[12px]">
+                  <thead className="sticky top-0 z-10 bg-background">
+                    <tr className="border-b-[0.5px] border-border text-left text-[12px] text-muted-foreground">
+                      <th className="w-9 py-1.5 pl-6">
+                        <HeaderCheckbox
+                          checked={allVisibleSelected}
+                          indeterminate={someVisibleSelected}
+                          disabled={rows.length === 0}
+                          onChange={toggleVisible}
+                        />
+                      </th>
+                      <th className="px-2 py-1.5 font-normal">名称</th>
+                      <th className="w-20 px-3 py-1.5 font-normal">类型</th>
+                      <th className="px-3 py-1.5 font-normal">服务器</th>
+                      <th className="w-16 px-3 py-1.5 text-right font-normal">端口</th>
+                      <th className="w-32 py-1.5 pr-6 pl-3 font-normal">来源</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.slice(0, renderLimit).map((node) => {
+                      const key = nodeKey(node);
+                      const checked = selectedKeys.has(key);
+                      return (
+                        <tr
+                          key={`${key}`}
+                          onClick={() => toggle(node)}
+                          title={node.airportEnabled ? undefined : '机场已停用，不会进入订阅'}
+                          className={cn(
+                            'cursor-pointer border-b-[0.5px] border-border/60',
+                            checked ? 'bg-accent/60 hover:bg-accent' : 'hover:bg-surface',
+                            !node.airportEnabled && 'opacity-50',
+                          )}
+                        >
+                          <td className="py-1 pl-6">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onClick={(event) => event.stopPropagation()}
+                              onChange={() => toggle(node)}
+                              aria-label={`选择 ${node.name}`}
+                              className="size-3.5 accent-primary"
+                            />
+                          </td>
+                          <td className="max-w-0 truncate px-2 py-1 text-foreground">
+                            {node.name}
+                          </td>
+                          <td className="px-3 py-1 text-muted-foreground">{node.type || '—'}</td>
+                          <td className="max-w-0 truncate px-3 py-1 font-mono text-[12px] text-muted-foreground">
+                            {node.server}
+                          </td>
+                          <td className="px-3 py-1 text-right tabular-nums text-muted-foreground">
+                            {node.port}
+                          </td>
+                          <td className="max-w-0 truncate py-1 pr-6 pl-3 text-muted-foreground">
+                            {node.airportName}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {rows.length > renderLimit && (
+                  <div className="border-t-[0.5px] border-border px-6 py-2 text-center">
+                    <button
+                      type="button"
+                      onClick={() => setRenderLimit((value) => value + 200)}
+                      className="text-[12px] text-muted-foreground outline-none hover:text-foreground"
+                    >
+                      显示更多（剩余 {rows.length - renderLimit}）
+                    </button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
                 {nodesQuery.isPending ? (
                   <p className="text-[12px] text-muted-foreground">载入中</p>
                 ) : nodes.length === 0 ? (
-                  <p className="text-[13px] font-medium">还没有可用节点</p>
+                  <p className="text-[13px] font-medium">还没有节点</p>
                 ) : (
                   <p className="text-[12px] text-muted-foreground">没有匹配的节点</p>
                 )}
@@ -572,7 +663,7 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
           {pools.length === 0 ? (
             <>
               <p className="text-[13px] font-medium">还没有节点池</p>
-              <Button variant="primary" onClick={() => setAdding(true)}>
+              <Button variant="primary" onClick={openCreate}>
                 新建节点池
               </Button>
             </>
@@ -581,6 +672,151 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
           )}
         </div>
       )}
+
+      <DialogRoot
+        open={ruleOpen}
+        onOpenChange={(open) => {
+          setRuleOpen(open);
+          if (!open) setRuleError('');
+        }}
+      >
+        <DialogContent>
+          <div className="flex items-start justify-between gap-4">
+            <DialogTitle>按规则选择</DialogTitle>
+            <DialogClose
+              render={
+                <Button type="button" variant="ghost" size="icon" aria-label="关闭">
+                  <RiCloseLine className="size-4" />
+                </Button>
+              }
+            />
+          </div>
+
+          <div className="mt-4 space-y-3">
+            <div>
+              <Label htmlFor="rule-airport">机场</Label>
+              <select
+                id="rule-airport"
+                value={ruleAirport}
+                onChange={(event) => setRuleAirport(event.target.value)}
+                className="mt-1.5 h-7 w-full rounded-control border-[0.5px] border-input bg-background px-2 text-[12px] text-foreground outline-none"
+              >
+                <option value="">全部机场</option>
+                {airports.map((airport) => (
+                  <option key={airport.id} value={airport.id}>
+                    {airport.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <Label htmlFor="rule-type">类型</Label>
+              <select
+                id="rule-type"
+                value={ruleType}
+                onChange={(event) => setRuleType(event.target.value)}
+                className="mt-1.5 h-7 w-full rounded-control border-[0.5px] border-input bg-background px-2 text-[12px] text-foreground outline-none"
+              >
+                <option value="all">全部类型</option>
+                {types.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <Label htmlFor="rule-keyword">名称包含</Label>
+              <Input
+                id="rule-keyword"
+                className="mt-1.5"
+                value={ruleKeyword}
+                onChange={(event) => setRuleKeyword(event.target.value)}
+                placeholder="例如 US、0.5x"
+              />
+            </div>
+
+            {ruleError && <p className="text-[12px] text-danger">{ruleError}</p>}
+          </div>
+
+          <DialogFooter className="mt-5">
+            <DialogClose
+              render={
+                <Button type="button" variant="ghost">
+                  取消
+                </Button>
+              }
+            />
+            <Button type="button" variant="outline" onClick={() => applyRule('replace')}>
+              替换选择
+            </Button>
+            <Button type="button" variant="primary" onClick={() => applyRule('append')}>
+              追加选择
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </DialogRoot>
+
+      <DialogRoot
+        open={createOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) setCreateError('');
+        }}
+      >
+        <DialogContent>
+          <div className="flex items-start justify-between gap-4">
+            <DialogTitle>新建节点池</DialogTitle>
+            <DialogClose
+              render={
+                <Button type="button" variant="ghost" size="icon" aria-label="关闭">
+                  <RiCloseLine className="size-4" />
+                </Button>
+              }
+            />
+          </div>
+
+          <form
+            className="mt-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!newName.trim() || create.isPending) return;
+              setCreateError('');
+              create.mutate();
+            }}
+          >
+            <Label htmlFor="pool-name">名称</Label>
+            <Input
+              id="pool-name"
+              className="mt-1.5"
+              value={newName}
+              onChange={(event) => setNewName(event.target.value)}
+              autoFocus
+            />
+
+            {createError && <p className="mt-3 text-[12px] text-danger">{createError}</p>}
+
+            <DialogFooter className="mt-5">
+              <DialogClose
+                render={
+                  <Button type="button" variant="ghost">
+                    取消
+                  </Button>
+                }
+              />
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={create.isPending || !newName.trim()}
+              >
+                {create.isPending ? '创建中' : '创建'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </DialogRoot>
     </AppShell>
   );
 }

@@ -26,22 +26,32 @@ describe('parseRoute', () => {
   });
 
   it('机场中转路径', () => {
-    expect(parseRoute('/providers/airports/airport-a')).toEqual({
+    expect(parseRoute('/sub/k3m9x2qa/providers/airports/airport-a')).toEqual({
       kind: 'provider',
+      configId: 'k3m9x2qa',
       id: 'airport-a',
     });
-    expect(parseRoute('/providers/airports/airport-a/')).toEqual({
+    expect(parseRoute('/sub/k3m9x2qa/providers/airports/airport-a/')).toEqual({
       kind: 'provider',
+      configId: 'k3m9x2qa',
       id: 'airport-a',
     });
-    expect(parseRoute('/providers')).toEqual({ kind: 'notFound' });
-    expect(parseRoute('/providers/airport-a')).toEqual({ kind: 'notFound' });
+    expect(parseRoute('/sub/k3m9x2qa/providers/airports')).toEqual({ kind: 'notFound' });
+    expect(parseRoute('/providers/airports/airport-a')).toEqual({ kind: 'assets' });
   });
 
   it('节点池订阅路径', () => {
-    expect(parseRoute('/providers/pools/grp-1')).toEqual({ kind: 'pool', id: 'grp-1' });
-    expect(parseRoute('/providers/pools/grp-1/')).toEqual({ kind: 'pool', id: 'grp-1' });
-    expect(parseRoute('/providers/pools')).toEqual({ kind: 'notFound' });
+    expect(parseRoute('/sub/k3m9x2qa/providers/pools/pool-1')).toEqual({
+      kind: 'pool',
+      configId: 'k3m9x2qa',
+      id: 'pool-1',
+    });
+    expect(parseRoute('/sub/k3m9x2qa/providers/pools/pool-1/')).toEqual({
+      kind: 'pool',
+      configId: 'k3m9x2qa',
+      id: 'pool-1',
+    });
+    expect(parseRoute('/sub/k3m9x2qa/providers/pools')).toEqual({ kind: 'notFound' });
     expect(parseRoute('/admin/pools')).toEqual({ kind: 'assets' });
   });
 

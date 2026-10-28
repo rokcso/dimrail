@@ -3,11 +3,11 @@ import { bearerToken, checkAdmin, timingSafeEqual } from '@/worker/auth';
 import { validateConfig } from '@/worker/validate';
 
 describe('timingSafeEqual', () => {
-  it('相同返回 true，不同长度与不同内容返回 false', () => {
-    expect(timingSafeEqual('abc', 'abc')).toBe(true);
-    expect(timingSafeEqual('abc', 'abd')).toBe(false);
-    expect(timingSafeEqual('abc', 'abcd')).toBe(false);
-    expect(timingSafeEqual('', '')).toBe(true);
+  it('相同返回 true，不同长度与不同内容返回 false', async () => {
+    expect(await timingSafeEqual('abc', 'abc')).toBe(true);
+    expect(await timingSafeEqual('abc', 'abd')).toBe(false);
+    expect(await timingSafeEqual('abc', 'abcd')).toBe(false);
+    expect(await timingSafeEqual('', '')).toBe(true);
   });
 });
 
@@ -26,22 +26,24 @@ describe('checkAdmin', () => {
       headers: authorization ? { Authorization: authorization } : {},
     });
 
-  it('未配置 ADMIN_TOKEN 时返回 503', () => {
-    expect(checkAdmin(request('Bearer x'), {})).toEqual({
+  it('未配置 ADMIN_TOKEN 时返回 503', async () => {
+    expect(await checkAdmin(request('Bearer x'), {})).toEqual({
       ok: false,
       status: 503,
       message: '未配置 ADMIN_TOKEN',
     });
   });
 
-  it('口令正确才放行', () => {
-    expect(checkAdmin(request('Bearer secret'), { ADMIN_TOKEN: 'secret' })).toEqual({ ok: true });
-    expect(checkAdmin(request('Bearer wrong'), { ADMIN_TOKEN: 'secret' })).toEqual({
+  it('口令正确才放行', async () => {
+    expect(await checkAdmin(request('Bearer secret'), { ADMIN_TOKEN: 'secret' })).toEqual({
+      ok: true,
+    });
+    expect(await checkAdmin(request('Bearer wrong'), { ADMIN_TOKEN: 'secret' })).toEqual({
       ok: false,
       status: 401,
       message: '口令错误',
     });
-    expect(checkAdmin(request(), { ADMIN_TOKEN: 'secret' })).toEqual({
+    expect(await checkAdmin(request(), { ADMIN_TOKEN: 'secret' })).toEqual({
       ok: false,
       status: 401,
       message: '口令错误',
@@ -71,6 +73,14 @@ describe('validateConfig', () => {
     const result = validateConfig('mode: rule\nrules:\n  - MATCH,DIRECT\n');
     expect(result.ok).toBe(true);
     expect(result.notices).toHaveLength(2);
+  });
+
+  it('注入标记允许任意缩进', async () => {
+    const { injectProviders } = await import('@/worker/inject');
+    const yaml =
+      'proxy-providers:\n    # __PROXY_PROVIDERS__\nproxy-groups:\n  - use: [__PROVIDER_NAMES__]\n';
+    expect(injectProviders(yaml, '  A:\n    type: http')).toContain('  A:');
+    expect(validateConfig(yaml).notices).toHaveLength(0);
   });
 
   it('手写 proxy-providers 时不再提示名字标记', () => {

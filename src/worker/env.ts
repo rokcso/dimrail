@@ -3,4 +3,6 @@ export interface Bindings {
   ADMIN_TOKEN?: string;
   ASSETS?: Fetcher;
   DB?: D1Database;
+  /** Cloudflare Rate Limiting binding，保护 /api/* */
+  ADMIN_RATE_LIMIT?: RateLimit;
 }

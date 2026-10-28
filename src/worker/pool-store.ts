@@ -197,7 +197,7 @@ export async function setPoolMembers(
 export async function listPoolNodes(env: Bindings, id: string): Promise<ProxyNode[]> {
   const { results } = await requireDb(env)
     .prepare(
-      `SELECT n.data
+      `SELECT n.data, a.name AS airport_name
        FROM node_pool_nodes AS m
        JOIN airports AS a ON a.id = m.airport_id
        JOIN airport_nodes AS n
@@ -206,20 +206,67 @@ export async function listPoolNodes(env: Bindings, id: string): Promise<ProxyNod
        ORDER BY a.position ASC, a.created_at ASC, n.idx ASC`,
     )
     .bind(id)
-    .all<{ data: string }>();
+    .all<{ data: string; airport_name: string }>();
 
   const nodes: ProxyNode[] = [];
+  const names = new Set<string>();
   for (const item of results ?? []) {
     try {
       const parsed: unknown = JSON.parse(item.data);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        nodes.push(parsed as ProxyNode);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) continue;
+      const node = parsed as ProxyNode;
+      const rawName = typeof node.name === 'string' ? node.name : '';
+      let name = rawName;
+
+      // 跨机场聚合时同名节点会让 Clash 冲突，重名时加机场后缀。
+      if (names.has(name)) {
+        const base = rawName || 'node';
+        name = `${base} (${item.airport_name})`;
+        let suffix = 2;
+        while (names.has(name)) {
+          name = `${base} (${item.airport_name} ${suffix})`;
+          suffix += 1;
+        }
+        node.name = name;
       }
+      names.add(name);
+      nodes.push(node);
     } catch {
       // 单行存坏了就跳过，别让整池跟着废掉
     }
   }
   return nodes;
+}
+
+/** 节点池实际会用到的机场配额头（只算启用机场）。 */
+export async function listPoolUserinfo(env: Bindings, id: string): Promise<string[]> {
+  const { results } = await requireDb(env)
+    .prepare(
+      `SELECT DISTINCT a.userinfo
+       FROM node_pool_nodes AS m
+       JOIN airports AS a ON a.id = m.airport_id
+       WHERE m.pool_id = ? AND a.enabled = 1 AND a.userinfo IS NOT NULL`,
+    )
+    .bind(id)
+    .all<{ userinfo: string }>();
+  return (results ?? []).map((row) => row.userinfo);
+}
+
+/** 池里是否至少有一个当前可用的节点（机场启用且节点还能匹配上）。 */
+export async function hasAvailablePoolNodes(env: Bindings, id: string): Promise<boolean> {
+  const row = await requireDb(env)
+    .prepare(
+      `SELECT 1 AS hit
+       FROM node_pool_nodes AS m
+       JOIN airports AS a ON a.id = m.airport_id
+       JOIN airport_nodes AS n
+         ON n.airport_id = m.airport_id AND n.name = m.node_name AND n.type = m.node_type
+       WHERE m.pool_id = ? AND a.enabled = 1
+       LIMIT 1`,
+    )
+    .bind(id)
+    .first();
+  return Boolean(row);
 }
 
 /** 机场被删除或换链接时，把它从所有池里摘掉。 */

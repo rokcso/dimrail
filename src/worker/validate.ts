@@ -1,4 +1,5 @@
 import { parse } from 'yaml';
+import { hasProviderMarker } from './inject';
 
 export interface ValidationResult {
   ok: boolean;
@@ -21,7 +22,7 @@ export function validateConfig(yaml: string): ValidationResult {
     return { ok: false, error: '内容必须是一个 YAML 对象', notices };
   }
 
-  if (!yaml.includes('# __PROXY_PROVIDERS__')) {
+  if (!hasProviderMarker(yaml)) {
     notices.push('缺少 # __PROXY_PROVIDERS__，配置里不会有节点');
   }
   if (!yaml.includes('__PROVIDER_NAMES__') && !looksLikeManualProviders(doc)) {

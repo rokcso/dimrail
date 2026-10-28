@@ -5,10 +5,21 @@ const NAME_MAX = 40;
 const DISPLAY_NAME_MAX = 40;
 
 /** 单份 YAML 内容（基础配置保存用）。 */
-export const yamlPayloadSchema = z.object({ yaml: z.string().min(1).max(YAML_MAX) });
+export const yamlPayloadSchema = z.object({
+  yaml: z.string().min(1).max(YAML_MAX),
+  /** 客户端看到的更新版本，用于乐观并发检查 */
+  expectedUpdatedAt: z.number().int().nullable().optional(),
+});
+
+const configNameSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(NAME_MAX)
+  .refine((value) => !/[\r\n]/.test(value), '名称不能包含换行');
 
 export const configCreateSchema = z.object({
-  name: z.string().trim().min(1).max(NAME_MAX).optional(),
+  name: configNameSchema.optional(),
 });
 
 /**
@@ -18,8 +29,9 @@ export const configCreateSchema = z.object({
 export const configUpdateSchema = z
   .object({
     yaml: z.string().min(1).max(YAML_MAX).optional(),
-    name: z.string().trim().min(1).max(NAME_MAX).optional(),
+    name: configNameSchema.optional(),
     poolId: z.string().min(1).max(32).nullable().optional(),
+    expectedUpdatedAt: z.number().int().nullable().optional(),
   })
   .refine(
     (value) => value.yaml !== undefined || value.name !== undefined || value.poolId !== undefined,
@@ -79,6 +91,7 @@ export const nodePoolMemberSchema = z.object({
 
 export const nodePoolMembersPayloadSchema = z.object({
   members: z.array(nodePoolMemberSchema).max(10_000),
+  expectedUpdatedAt: z.number().int().nullable().optional(),
 });
 
 /** 基础配置。seeded 表示 D1 里还没有，读的是构建期模板。 */
@@ -126,6 +139,8 @@ export interface AirportSummary {
   nodeCount: number;
   /** 上游给的 subscription-userinfo 原文 */
   userinfo: string | null;
+  /** 拉取时是否因为节点过多被截断 */
+  truncated: boolean;
   fetchedAt: number | null;
   /** 最近一次拉取失败的原因；成功后清空，旧节点保留 */
   error: string | null;
@@ -153,6 +168,8 @@ export interface NodeView {
   port: string;
   airportId: string;
   airportName: string;
+  /** 机场停用后节点仍可展示/圈选，但不会进入最终订阅 */
+  airportEnabled: boolean;
 }
 
 export interface NodesResponse {

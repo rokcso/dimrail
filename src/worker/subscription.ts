@@ -1,4 +1,4 @@
-import { parse } from 'yaml';
+import { parse, stringify } from 'yaml';
 
 /** 机场吐出来的单个节点：原样保存，转发时要用到里面的全部字段。 */
 export type ProxyNode = Record<string, unknown>;
@@ -108,4 +108,9 @@ function firstLine(err: unknown): string {
   const raw = err instanceof Error ? err.message : String(err);
   if (/timeout|timed out/i.test(raw)) return '超时';
   return raw.split('\n')[0] ?? '未知错误';
+}
+
+/** Provider 文件正文：机场缓存与节点池输出共用。 */
+export function stringifyProxies(nodes: ProxyNode[]): string {
+  return stringify({ proxies: nodes }, { lineWidth: 0 });
 }

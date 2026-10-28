@@ -15,7 +15,7 @@ export interface ProviderRef {
 }
 
 const SUMMARY_COLUMNS =
-  'id, name, url, enabled, position, node_count, userinfo, fetched_at, error, error_at, created_at, updated_at';
+  'id, name, url, enabled, position, node_count, userinfo, fetched_at, error, error_at, truncated, created_at, updated_at';
 
 interface AirportRow {
   id: string;
@@ -28,6 +28,7 @@ interface AirportRow {
   fetched_at: number | null;
   error: string | null;
   error_at: number | null;
+  truncated: number;
   created_at: number;
   updated_at: number;
 }
@@ -46,6 +47,7 @@ function toSummary(row: AirportRow): AirportSummary {
     position: row.position,
     nodeCount: row.node_count,
     userinfo: row.userinfo,
+    truncated: row.truncated === 1,
     fetchedAt: row.fetched_at,
     error: row.error,
     errorAt: row.error_at,
@@ -102,23 +104,58 @@ export async function listProviderRefs(env: Bindings): Promise<ProviderRef[]> {
   return results ?? [];
 }
 
-/** 节点列表：只取展示要用的四列，凭据留在 data 里不往外送。 */
-export async function listNodeViews(env: Bindings): Promise<NodeViewRow[]> {
-  const { results } = await requireDb(env)
-    .prepare(
-      `SELECT a.id AS airportId, a.name AS airportName, n.name, n.type, n.server, n.port
+export interface NodeViewQuery {
+  airportId?: string;
+  keyword?: string;
+  type?: string;
+  limit?: number;
+  offset?: number;
+}
+
+/** 节点列表：只取展示要用的字段，凭据留在 data 里不往外送。 */
+export async function listNodeViews(
+  env: Bindings,
+  query: NodeViewQuery = {},
+): Promise<NodeViewRow[]> {
+  const clauses: string[] = [];
+  const binds: unknown[] = [];
+
+  if (query.airportId) {
+    clauses.push('a.id = ?');
+    binds.push(query.airportId);
+  }
+  if (query.keyword) {
+    clauses.push('(n.name LIKE ? OR n.server LIKE ?)');
+    binds.push(`%${query.keyword}%`, `%${query.keyword}%`);
+  }
+  if (query.type) {
+    clauses.push('n.type = ?');
+    binds.push(query.type);
+  }
+
+  let sql = `SELECT a.id AS airportId, a.name AS airportName, a.enabled AS airportEnabled,
+              n.name, n.type, n.server, n.port
        FROM airport_nodes AS n
-       JOIN airports AS a ON a.id = n.airport_id
-       WHERE a.enabled = 1
-       ORDER BY a.position ASC, a.created_at ASC, n.idx ASC`,
-    )
-    .all<NodeViewRow>();
+       JOIN airports AS a ON a.id = n.airport_id`;
+  if (clauses.length) sql += ` WHERE ${clauses.join(' AND ')}`;
+  sql += ' ORDER BY a.position ASC, a.created_at ASC, n.idx ASC';
+  if (query.limit) {
+    sql += ' LIMIT ? OFFSET ?';
+    binds.push(query.limit, query.offset ?? 0);
+  }
+
+  const statement = requireDb(env).prepare(sql);
+  const { results } = await (binds.length
+    ? statement.bind(...binds)
+    : statement
+  ).all<NodeViewRow>();
   return results ?? [];
 }
 
 export interface NodeViewRow {
   airportId: string;
   airportName: string;
+  airportEnabled: number;
   name: string;
   type: string;
   server: string;
@@ -196,6 +233,7 @@ export async function createAirport(
       position,
       nodeCount: 0,
       userinfo: null,
+      truncated: false,
       fetchedAt: null,
       error: null,
       errorAt: null,
@@ -234,7 +272,7 @@ export async function updateAirport(
   }
   await db
     .prepare(
-      `UPDATE airports SET name = ?, url = ?, enabled = ?, updated_at = ?${urlChanged ? ', node_count = 0, userinfo = NULL, fetched_at = NULL, error = NULL, error_at = NULL' : ''}
+      `UPDATE airports SET name = ?, url = ?, enabled = ?, updated_at = ?${urlChanged ? ', node_count = 0, userinfo = NULL, fetched_at = NULL, error = NULL, error_at = NULL, truncated = 0, refresh_lock = NULL' : ''}
        WHERE id = ?`,
     )
     .bind(next.name, next.url, next.enabled, updatedAt, id)
@@ -248,6 +286,7 @@ export async function updateAirport(
     updated_at: updatedAt,
     node_count: urlChanged ? 0 : row.node_count,
     userinfo: urlChanged ? null : row.userinfo,
+    truncated: urlChanged ? 0 : row.truncated,
     fetched_at: urlChanged ? null : row.fetched_at,
     error: urlChanged ? null : row.error,
     error_at: urlChanged ? null : row.error_at,
@@ -286,6 +325,7 @@ export async function saveNodes(
   id: string,
   nodes: ProxyNode[],
   userinfo: string | null,
+  truncated: boolean,
 ): Promise<void> {
   const db = requireDb(env);
   const now = Date.now();
@@ -335,10 +375,11 @@ export async function saveNodes(
   await db
     .prepare(
       `UPDATE airports SET node_count = ?, userinfo = COALESCE(?, userinfo),
-         fetched_at = ?, error = NULL, error_at = NULL, updated_at = ?
+         fetched_at = ?, error = NULL, error_at = NULL, truncated = ?,
+         refresh_lock = NULL, updated_at = ?
        WHERE id = ?`,
     )
-    .bind(nodes.length, userinfo, now, now, id)
+    .bind(nodes.length, userinfo, now, truncated ? 1 : 0, now, id)
     .run();
 }
 
@@ -346,8 +387,29 @@ export async function saveNodes(
 export async function markError(env: Bindings, id: string, message: string): Promise<void> {
   const now = Date.now();
   await requireDb(env)
-    .prepare('UPDATE airports SET error = ?, error_at = ?, updated_at = ? WHERE id = ?')
+    .prepare(
+      'UPDATE airports SET error = ?, error_at = ?, refresh_lock = NULL, updated_at = ? WHERE id = ?',
+    )
     .bind(message, now, now, id)
+    .run();
+}
+
+/** 回源锁：同一机场同一时间只让一个请求去上游。锁超过一分钟视为失效。 */
+export async function acquireRefreshLock(env: Bindings, id: string): Promise<boolean> {
+  const now = Date.now();
+  const result = await requireDb(env)
+    .prepare(
+      'UPDATE airports SET refresh_lock = ? WHERE id = ? AND (refresh_lock IS NULL OR refresh_lock < ?)',
+    )
+    .bind(now, id, now - 60_000)
+    .run();
+  return (result.meta.changes ?? 0) > 0;
+}
+
+export async function releaseRefreshLock(env: Bindings, id: string): Promise<void> {
+  await requireDb(env)
+    .prepare('UPDATE airports SET refresh_lock = NULL WHERE id = ?')
+    .bind(id)
     .run();
 }
 
