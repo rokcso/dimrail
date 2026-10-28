@@ -167,10 +167,7 @@ export function PoolsPage({ token, path, selectedId, onNavigate, onReplace, onRe
   }, [blocker]);
 
   const refreshPools = async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['pools'] }),
-      queryClient.invalidateQueries({ queryKey: ['overview'] }),
-    ]);
+    await queryClient.invalidateQueries({ queryKey: ['pools'] });
   };
 
   const onMutationError = async (err: Error) => {

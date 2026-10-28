@@ -92,7 +92,6 @@ export function AirportsPage({
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['airports'] }),
       queryClient.invalidateQueries({ queryKey: ['nodes'] }),
-      queryClient.invalidateQueries({ queryKey: ['overview'] }),
     ]);
   };
 

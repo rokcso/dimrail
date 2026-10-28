@@ -166,7 +166,6 @@ export function ConfigsPage({
         prev ? { ...prev, yaml, name: name.trim(), updatedAt: response.updatedAt } : prev,
       );
       void queryClient.invalidateQueries({ queryKey: ['configs'] });
-      void queryClient.invalidateQueries({ queryKey: ['overview'] });
     },
     onError: (err: Error) => {
       setError(err.message);
@@ -178,10 +177,7 @@ export function ConfigsPage({
     mutationFn: () => api.post<ConfigDetail>('/api/configs', token, {}),
     onSuccess: async (created) => {
       queryClient.setQueryData(['config', created.id], created);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['configs'] }),
-        queryClient.invalidateQueries({ queryKey: ['overview'] }),
-      ]);
+      await queryClient.invalidateQueries({ queryKey: ['configs'] });
       onNavigate(`/admin/configs/${created.id}`);
     },
     onError: (err: Error) => {
@@ -194,10 +190,7 @@ export function ConfigsPage({
     mutationFn: (id: string) => api.del<{ ok: boolean }>(`/api/configs/${id}`, token),
     onSuccess: async (_data, id) => {
       queryClient.removeQueries({ queryKey: ['config', id] });
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['configs'] }),
-        queryClient.invalidateQueries({ queryKey: ['overview'] }),
-      ]);
+      await queryClient.invalidateQueries({ queryKey: ['configs'] });
     },
     onError: (err: Error) => {
       setError(err.message);

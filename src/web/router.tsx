@@ -149,12 +149,6 @@ const settingsBaseRoute = createRoute({
   component: () => <PageRoute Page={SettingsPage} />,
 });
 
-const settingsOverviewRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/admin/settings/overview',
-  component: () => <PageRoute Page={SettingsPage} />,
-});
-
 const routeTree = rootRoute.addChildren([
   indexRoute,
   adminRoute,
@@ -166,7 +160,6 @@ const routeTree = rootRoute.addChildren([
   poolDetailRoute,
   settingsRoute,
   settingsBaseRoute,
-  settingsOverviewRoute,
 ]);
 
 export const router = createRouter({ routeTree });

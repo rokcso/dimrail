@@ -58,7 +58,6 @@ GET  /admin/pools                节点池列表
 GET  /admin/pools/<id>           选中某个节点池
 GET  /admin/settings              重定向到 /admin/settings/base
 GET  /admin/settings/base         基础配置
-GET  /admin/settings/overview     概览
 
 GET  /sub/<配置 id>?token=<token>                          Clash 主配置（proxy-providers 由 Worker 注入）
 GET  /sub/<配置 id>/providers/airports/<机场 id>?token=    机场订阅中转（D1 缓存，原样回传 proxies）
