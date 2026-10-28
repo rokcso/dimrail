@@ -5,6 +5,7 @@
   "compatibility_date": "2026-08-03",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "workers_dev": true,
+  "preview_urls": false,
 
   // 前端产物：pnpm build → dist/client
   "assets": {
@@ -19,7 +20,7 @@
     {
       "binding": "DB",
       "database_name": "dimrail",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "5614b9c0-6e5d-44cf-9f8a-3ba68314bd7b",
       "migrations_dir": "./migrations"
     }
   ],
